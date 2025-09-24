@@ -35,7 +35,6 @@ model User {
   userTags     UserTag[]
   gameStatuses GameStatus[]
 
-  achievements   AchievementUnlock[]
   uploadedImages Image[]             @relation("user_uploaded_images")
   ReviewComment  ReviewComment[]
   GameUser       GameUser[]
@@ -64,7 +63,6 @@ model Game {
   developers   Developer[]   @relation("game_developers")
   publishers   Publisher[]   @relation("game_publishers")
   images       GameImage[]
-  achievements Achievement[]
   User         User?         @relation(fields: [userId], references: [id])
   userId       Int?
 
@@ -211,30 +209,6 @@ model GameImage {
   game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@index([gameId])
-}
-
-model Achievement {
-  id          Int                 @id @default(autoincrement())
-  title       String
-  description String?
-  gameId      Int
-  game        Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  unlocks     AchievementUnlock[]
-
-  @@unique([gameId, title]) // no duplicate achievement titles per game
-}
-
-model AchievementUnlock {
-  id         Int      @id @default(autoincrement())
-  unlockedAt DateTime @default(now())
-
-  userId Int
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  achievementId Int
-  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, achievementId]) // user cannot unlock same achievement twice
 }
 
 model EmailChange {
