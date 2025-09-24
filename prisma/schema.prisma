@@ -1,0 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  passwordHash     String?
+  googleId         String?   @unique
+  displayName      String
+  profilePicture   Image?    @relation(fields: [profilePictureId], references: [id], onDelete: SetNull)
+  profilePictureId Int?
+  emailVerified    Boolean   @default(false)
+  birthDate        DateTime?
+  registrationDate DateTime  @default(dbgenerated("timezone('UTC'::text, now())"))
+
+  emailChanges       EmailChange[]
+  emailVerifications EmailVerification[]
+  passwordResets     PasswordReset[]
+
+  playedGames Game[]
+  favourites  Game[] @relation("favouritedGames")
+
+  sentFriendRequests     Friendship[] @relation("sent_friendship_requests")
+  receivedFriendRequests Friendship[] @relation("received_friendship_requests")
+  groups                 UserGroup[]
+
+  reviews      Review[]
+  reviewTags   ReviewUserTag[]
+  userTags     UserTag[]
+  gameStatuses GameStatus[]
+
+  achievements   AchievementUnlock[]
+  uploadedImages Image[]             @relation("user_uploaded_images")
+  ReviewComment  ReviewComment[]
+  GameUser       GameUser[]
+
+  @@index([displayName])
+}
+
+model Game {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  releaseDate DateTime?
+
+  coverImageId Int?
+  coverImage   Image? @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+
+  reviews      Review[]
+  users        GameUser[]
+  favouritedBy User[]     @relation("favouritedGames")
+
+  genres    Genre[]      @relation("game_genres")
+  platforms Platform[]   @relation("game_platforms")
+  tags      GameTag[]
+  statuses  GameStatus[] @relation("game_statuses")
+
+  developers   Developer[]   @relation("game_developers")
+  publishers   Publisher[]   @relation("game_publishers")
+  images       GameImage[]
+  achievements Achievement[]
+  User         User?         @relation(fields: [userId], references: [id])
+  userId       Int?
+
+  @@unique([title, releaseDate])
+  @@index([title])
+}
+
+model Image {
+  id         Int      @id @default(autoincrement())
+  url        String
+  checksum   String   @unique
+  width      Int?
+  height     Int?
+  uploadedAt DateTime @default(now())
+
+  uploadedById Int?
+  uploadedBy   User? @relation("user_uploaded_images", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  games Game[]
+  User  User[]
+
+  @@index([uploadedAt])
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int // 1–10
+  content   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  gameId Int
+  game   Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  tags     ReviewUserTag[]
+  comments ReviewComment[]
+
+  @@unique([userId, gameId]) // One review per user per game
+  @@index([userId])
+  @@index([gameId])
+}
+
+model ReviewComment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  reviewId Int
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([userId])
+}
+
+model GameUser {
+  id       Int            @id @default(autoincrement())
+  userId   Int
+  gameId   Int
+  progress ProgressStatus @default(WISHLIST)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId]) // prevent duplicate game-user relations
+  @@index([progress])
+}
+
+enum ProgressStatus {
+  WISHLIST
+  PLAYING
+  COMPLETED
+  ON_HOLD
+  DROPPED
+  REPLAYING
+}
+
+model GameStatus {
+  id     Int            @id @default(autoincrement())
+  type   GameStatusType
+  games  Game[]         @relation("game_statuses")
+  userId Int
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type]) // each user can only assign one status per type
+}
+
+enum GameStatusType {
+  UPCOMING
+  TRENDING
+  TOP
+  CLASSIC
+  NEW_RELEASE
+}
+
+model UserTag {
+  id    Int    @id @default(autoincrement())
+  label String @unique
+
+  users User[]
+}
+
+model GameTag {
+  id    Int    @id @default(autoincrement())
+  label String @unique
+
+  games Game[]
+}
+
+model ReviewUserTag {
+  id    Int    @id @default(autoincrement())
+  label String
+
+  reviewId Int
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId, label])
+}
+
+model Developer {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  games Game[] @relation("game_developers")
+}
+
+model Publisher {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  games Game[] @relation("game_publishers")
+}
+
+model GameImage {
+  id     Int    @id @default(autoincrement())
+  url    String
+  gameId Int
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId])
+}
+
+model Achievement {
+  id          Int                 @id @default(autoincrement())
+  title       String
+  description String?
+  gameId      Int
+  game        Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  unlocks     AchievementUnlock[]
+
+  @@unique([gameId, title]) // no duplicate achievement titles per game
+}
+
+model AchievementUnlock {
+  id         Int      @id @default(autoincrement())
+  unlockedAt DateTime @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  achievementId Int
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId]) // user cannot unlock same achievement twice
+}
+
+model EmailChange {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newEmail  String
+  token     String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model EmailVerification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+}
+
+model Friendship {
+  id         Int              @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+
+  sender   User @relation("sent_friendship_requests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("received_friendship_requests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId]) // prevent duplicate friendships
+  @@index([status])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+model UserGroup {
+  id   Int    @id @default(autoincrement())
+  name String
+  role String @default("member")
+
+  users User[]
+
+  @@unique([name])
+}
+
+model Genre {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  games Game[] @relation("game_genres")
+}
+
+model Platform {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  games Game[] @relation("game_platforms")
+}
