@@ -8,3 +8,7 @@
 ### npx generate will prob give u some duplicate files
 ### npx prisma studio allows us to browse
 ### npx prisma dev starts a local postgres server
+
+### some useful docker commands
+### docker compose up
+### docker compose dev
