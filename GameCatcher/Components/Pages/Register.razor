@@ -1,0 +1,73 @@
+﻿@page "/register"
+@using System.ComponentModel.DataAnnotations
+
+<h3 class="mb-4">Register</h3>
+
+<EditForm Model="@RegisterModel" OnValidSubmit="@HandleRegistration" FormName="RegisterForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <InputText  @bind-Value="RegisterModel!.Username" class="form-control" id="username" />
+        <ValidationMessage For="@(() => RegisterModel!.Username)" />
+    </div>
+
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <InputText @bind-Value="RegisterModel!.Email" class="form-control" id="email" />
+        <ValidationMessage For="@(() => RegisterModel!.Email)" />
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <InputText @bind-Value="RegisterModel!.Password" class="form-control" type="password" />
+        <ValidationMessage For="@(() => RegisterModel!.Password)" />
+    </div>
+
+    <div class="form-group">
+        <label for="confirmPassword">Confirm Password:</label>
+        <InputText @bind-Value="RegisterModel!.ConfirmPassword"
+            class="form-control" type="password" />
+        <ValidationMessage For="@(() => RegisterModel!.ConfirmPassword)" />
+    </div>
+    <div class="mb-3">
+        <a href="/login">Already have an account? Login here.</a>
+    </div>
+    <button type="submit" class="btn btn-primary">Register</button>
+</EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    private RegisterViewModel? RegisterModel { get; set; }
+
+    protected override void OnInitialized() => RegisterModel ??= new RegisterViewModel();
+
+    // Use the DataAnnotations validator + OnValidSubmit handler
+    private void HandleRegistration()
+    {
+        Console.WriteLine($"Username: {RegisterModel!.Username}");
+        Console.WriteLine($"Email: {RegisterModel!.Email}");
+    }
+
+    public class RegisterViewModel
+    {
+        [Required]
+        public string? Username { get; set; }
+
+        [Required]
+        [EmailAddress(ErrorMessage = "Invalid email address.")]
+        public string? Email { get; set; }
+
+        [Required]
+        [StringLength(maximumLength: 20, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.",
+        MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string? Password { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string? ConfirmPassword { get; set; }
+    }
+}

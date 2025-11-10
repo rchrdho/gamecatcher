@@ -1,0 +1,58 @@
+﻿@page "/login"
+@using System.ComponentModel.DataAnnotations
+
+<h3 class="mb-4">Login</h3>
+
+<EditForm Model="@LoginModel" FormName="LoginForm" OnValidSubmit="@HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <InputText id="username" @bind-Value="LoginModel!.Username" class="form-control" />
+        <ValidationMessage For="@(() => LoginModel!.Username)" />
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <InputText id="password" type="password" @bind-Value="LoginModel!.Password" class="form-control" />
+        <ValidationMessage For="@(() => LoginModel!.Password)" />
+    </div>
+    <div class="mb-3">
+        <a href="/register">Don't have an account? Register here.</a>
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+</EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginViewModel? LoginModel { get; set; }
+
+    protected override void OnInitialized() => LoginModel ??= new LoginViewModel();
+
+    @* private async Task HandleLogin()
+    {
+        // Implement login logic here, e.g., calling an API or Identity service
+        // Redirect to a dashboard or display an error message
+
+        // For demonstration, we'll just log the login details to the console
+    } *@
+
+    // Temporary synchronous method for demonstration
+    private void HandleLogin()
+    {
+        Console.WriteLine($"Username: {LoginModel?.Username}");
+        Console.WriteLine($"Password: {LoginModel?.Password}");
+    }
+
+    public class LoginViewModel
+    {
+        [Required]
+        public string? Username { get; set; }
+
+        [Required]
+        [StringLength(maximumLength: 20, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.",
+        MinimumLength = 6)]
+        public string? Password { get; set; }
+    }
+}
