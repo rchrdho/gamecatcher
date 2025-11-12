@@ -1,6 +1,10 @@
+using DotNetEnv;
 using GameCatcher.Components;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load environment variables from .env file
+Env.Load();
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

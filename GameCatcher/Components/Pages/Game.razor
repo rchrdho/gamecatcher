@@ -1,6 +1,7 @@
 ﻿@page "/game"
 @using System.Text
 @using GameCatcher.Models;
+@using GameCatcher.Services;
 @inject HttpClient httpClient
 
 <PageTitle>Game</PageTitle>
@@ -19,11 +20,9 @@ else
     @foreach (var g in gamesList)
     {
       <div class="card" style="width: 18rem;">
-        <img src="@g?.Cover?.Url" class="card-img-top" alt="Cover image">
+        <img src="@g?.ArtworkUrl" class="card-img-top" alt="Artwork image">
         <div class="card-body">
           <h5 class="card-title">@g?.Name</h5>
-          <p class="card-text">@g?.Summary</p>
-          <a href="#" class="btn btn-primary">Details</a>
         </div>
       </div>
     }
@@ -31,105 +30,52 @@ else
 }
 
 @code {
-  string? baseUrl = "https://api.igdb.com/v4/";
-  string? clientId = "75tjz90rrtop8md5n3e1xa09pismd8";
-  string? accessToken = "jer0oto3pvwl5trhk52b9abhda1d3o";
-  private List<GameDetails> gamesList = new List<GameDetails>();
-  private PeakGames? peakGames;
+  private IgdbService igdbService = new IgdbService();
+  private List<GameDetails>? gamesList;
+  private List<PeakGames>? peakGames;
   private bool isLoading = true;
 
   protected override async Task OnInitializedAsync()
   {
-    await FetchGameData();
+    await FetchGamesAsync();
   }
 
-  private async Task FetchGameData()
+  private async Task<List<IGDB.Models.PopularityPrimitive>?> GetPeakGamesAsync(int limit)
   {
-    try
-    {
-      string apiUrl = $"{baseUrl}popularity_primitives";
+    return await igdbService.GetPeakGamesAsync(limit);
+  }
+  private async Task FetchGamesAsync()
+  {
+    isLoading = true;
+    gamesList = new List<GameDetails>();
 
-      string requestBody = $"fields game_id,value,popularity_type; sort value desc; limit 10; where popularity_type = 5;";
-
-      var requestMessage = new HttpRequestMessage(HttpMethod.Post, apiUrl)
-      {
-        Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
-      };
-
-      requestMessage.Headers.Add("Client-Id", $"{clientId}");
-      requestMessage.Headers.Add("Authorization", $"Bearer {accessToken}");
-
-      var response = await httpClient.SendAsync(requestMessage);
-
-      if (response.IsSuccessStatusCode)
-      {
-        List<PeakGames>? pGames = await response.Content.ReadFromJsonAsync<List<PeakGames>>();
-
-        if (pGames?.Any() == true)
-        {
-          foreach (PeakGames pg in pGames)
-          {
-            peakGames = pg;
-            int gameId = peakGames.GameId;
-            Console.WriteLine(gameId);
-
-            string gameApiUrl = $"{baseUrl}games";
-            string gameRequestBody = $"fields name, summary, cover.url; where id = {gameId};";
-
-            HttpRequestMessage? gameRequestMessage = new HttpRequestMessage(HttpMethod.Post, gameApiUrl)
-            {
-              Content = new StringContent(gameRequestBody, Encoding.UTF8, "application/json")
-            };
-            gameRequestMessage.Headers.Add("Client-Id", $"{clientId}");
-            gameRequestMessage.Headers.Add("Authorization", $"Bearer {accessToken}");
-
-            HttpResponseMessage? gameResponse = await httpClient.SendAsync(gameRequestMessage);
-
-            if (gameResponse.IsSuccessStatusCode)
-            {
-              List<GameDetails>? fetched = await gameResponse.Content.ReadFromJsonAsync<List<GameDetails>>();
-
-              if (fetched?.Any() == true)
-              {
-                GameDetails? game = fetched.First();
-
-                if (game?.Cover != null && !string.IsNullOrEmpty(game.Cover.Url))
-                {
-                  game.Cover.Url = "https:" + game.Cover.Url.Replace("t_thumb", "t_cover_big");
-                }
-
-                gamesList.Add(game!);
-              }
-              else
-              {
-                Console.WriteLine($"No game details found for game id {gameId}.");
-              }
-            }
-            else
-            {
-              Console.WriteLine($"Failed to fetch game details for id {gameId}. Status Code: {gameResponse.StatusCode}");
-            }
-          }
-        }
-        else
-        {
-          Console.WriteLine("No popularity primitives returned.");
-        }
-      }
-      else
-      {
-        Console.WriteLine($"Failed to fetch popularity primitives. Status Code: {response.StatusCode}");
-      }
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"Error fetching game data: {ex.Message}");
-    }
-    finally
+    List<IGDB.Models.PopularityPrimitive>? wantToPlayGames = await GetPeakGamesAsync(30);
+    if (wantToPlayGames == null || !wantToPlayGames.Any())
     {
       isLoading = false;
       StateHasChanged();
+      return;
     }
-  }
 
+    // batch ids and request artworks in same call to avoid per-id requests
+    List<int>? ids = wantToPlayGames.Where(g => g?.GameId != null).Select(g => (int)g!.GameId!).Distinct().ToList();
+    List<IGDB.Models.Game>? games = await igdbService.GetGamesByIdsAsync(ids, "name,summary,artworks.image_id");
+
+    foreach (var gameDetails in games)
+    {
+      IGDB.Models.Artwork? artwork = gameDetails?.Artworks?.Values?.FirstOrDefault(a => !string.IsNullOrEmpty(a?.ImageId));
+      if (artwork == null)
+        continue;
+
+      gamesList.Add(new GameDetails
+      {
+        Name = gameDetails?.Name,
+        Summary = gameDetails?.Summary,
+        ArtworkUrl = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotBig)
+      });
+    }
+
+    isLoading = false;
+    StateHasChanged();
+  }
 }
