@@ -22,11 +22,11 @@ public class IgdbService
         _peakGames = new PeakGames();
     }
 
-    public async Task<List<PopularityPrimitive>> GetPeakGamesAsync(int limit)
+    public async Task<List<PopularityPrimitive>> GetGamesByTypeAsync(int limit, int popularityType)
     {
         var popularityPrimitives = await _igdbClient.QueryAsync<PopularityPrimitive>(
             IGDBClient.Endpoints.PopularityPrimitives,
-            query: $"fields id, game_id, popularity_type, value; limit {limit}; where popularity_type = 5;"
+            query: $"fields id, game_id, popularity_type, value; limit {limit}; where popularity_type = {popularityType};"
         );
         return popularityPrimitives.ToList();
     }

@@ -16,40 +16,46 @@ else if (gamesList is null || !gamesList.Any())
 }
 else
 {
-  <div class="d-flex flex-wrap gap-3">
-    @foreach (var g in gamesList)
-    {
-      <div class="card" style="width: 18rem;">
-        <img src="@g?.ArtworkUrl" class="card-img-top" alt="Artwork image">
-        <div class="card-body">
-          <h5 class="card-title">@g?.Name</h5>
+  <div class="container mb-4">
+    <h2>24hr Peak Players</h2>
+    <div class="d-flex flex-row flex-nowrap gap-3 overflow-auto py-2">
+      @foreach (var g in gamesList)
+      {
+        <div class="card flex-shrink-0" style="width: 18rem;">
+          <img src="@g?.ArtworkUrl" class="card-img-top" alt="Artwork image">
+          <div class="card-body">
+            <h5 class="card-title">@g?.Name</h5>
+          </div>
+          <a href="/game/@g?.Name" class="stretched-link" />
         </div>
-      </div>
-    }
+      }
+    </div>
   </div>
+
 }
 
 @code {
   private IgdbService igdbService = new IgdbService();
   private List<GameDetails>? gamesList;
-  private List<PeakGames>? peakGames;
+  @* private List<PeakGames>? peakGames; *@
   private bool isLoading = true;
 
   protected override async Task OnInitializedAsync()
   {
-    await FetchGamesAsync();
+    await Fetch24hrPeakPlayersAsync();
+    @* await FetchWantToPlayAsync(); *@
   }
 
-  private async Task<List<IGDB.Models.PopularityPrimitive>?> GetPeakGamesAsync(int limit)
+  private async Task<List<IGDB.Models.PopularityPrimitive>?> GetGamesByTypeAsync(int limit, int popularityType)
   {
-    return await igdbService.GetPeakGamesAsync(limit);
+    return await igdbService.GetGamesByTypeAsync(limit, popularityType);
   }
-  private async Task FetchGamesAsync()
+  private async Task Fetch24hrPeakPlayersAsync()
   {
     isLoading = true;
     gamesList = new List<GameDetails>();
 
-    List<IGDB.Models.PopularityPrimitive>? wantToPlayGames = await GetPeakGamesAsync(30);
+    List<IGDB.Models.PopularityPrimitive>? wantToPlayGames = await GetGamesByTypeAsync(30, 5);
     if (wantToPlayGames == null || !wantToPlayGames.Any())
     {
       isLoading = false;
@@ -78,4 +84,5 @@ else
     isLoading = false;
     StateHasChanged();
   }
+
 }
