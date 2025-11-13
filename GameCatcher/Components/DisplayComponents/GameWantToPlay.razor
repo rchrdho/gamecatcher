@@ -22,7 +22,7 @@ else
                     <div class="card-body">
                         <h5 class="card-title">@g?.Name</h5>
                     </div>
-                    <a href="/game/@g?.Name" class="stretched-link" />
+                    <a href="/game-info/@g?.GameId" class="stretched-link" />
                 </div>
             }
         </div>
@@ -60,7 +60,7 @@ else
 
         // batch ids and request artworks in same call to avoid per-id requests
         List<int>? ids = wantToPlayGames.Where(g => g?.GameId != null).Select(g => (int)g!.GameId!).Distinct().ToList();
-        List<IGDB.Models.Game>? games = await igdbService.GetGamesByIdsAsync(ids, "name,summary,artworks.image_id");
+        List<IGDB.Models.Game>? games = await igdbService.GetGamesByIdsAsync(ids);
 
         foreach (var gameDetails in games)
         {
@@ -70,6 +70,7 @@ else
 
             gamesList.Add(new GameDetails
             {
+                GameId = gameDetails?.Id,
                 Name = gameDetails?.Name,
                 Summary = gameDetails?.Summary,
                 ArtworkUrl = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotBig)

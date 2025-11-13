@@ -12,6 +12,8 @@ public class IgdbService
     private readonly GameDetails _gameDetails;
     private readonly PeakGames _peakGames;
 
+    public string GameQueryFields { get; set; } = "id, name, summary, artworks.image_id";
+
     public IgdbService()
     {
         var clientId = Environment.GetEnvironmentVariable("IGDB_CLIENT_ID");
@@ -31,13 +33,22 @@ public class IgdbService
         return popularityPrimitives.ToList();
     }
 
-    public async Task<List<Game>> GetGamesByIdsAsync(IEnumerable<int> ids, string fields)
+    public async Task<Game> GetGameDetailsBySingleId(long gameId)
+    {
+        var singleGameDetails = await _igdbClient.QueryAsync<Game>(
+            IGDBClient.Endpoints.Games,
+            query: $"fields id, name, summary, artworks.image_id; where id = {gameId};"
+        );
+        return singleGameDetails.FirstOrDefault()!;
+    }
+
+    public async Task<List<Game>> GetGamesByIdsAsync(IEnumerable<int> ids)
     {
         var idList = ids?.Where(i => i > 0).Distinct().ToList();
         if (idList == null || !idList.Any())
             return new List<Game>();
 
-        var q = $"fields {fields}; where id = ({string.Join(',', idList)}); limit {idList.Count};";
+        var q = $"fields {GameQueryFields}; where id = ({string.Join(',', idList)}); limit {idList.Count};";
         var games = await QueryWithRetryAsync<Game>(IGDBClient.Endpoints.Games, q);
         return games;
     }

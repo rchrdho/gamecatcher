@@ -1,0 +1,52 @@
+﻿@page "/game-info/{GameId:long}"
+@using GameCatcher.Models
+@using GameCatcher.Services
+@using IGDB.Models
+
+<div class="card mb-3">
+    <div class="row g-0">
+        <div class="col-md-4">
+            <img src="@gameDetails?.ArtworkUrl" class="img-fluid rounded-start" alt="@gameDetails?.Name artwork">
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <h5 class="card-title">@gameDetails?.Name</h5>
+                <p class="card-text">@gameDetails?.Summary</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public long GameId { get; set; }
+
+    public IgdbService igdbService = new IgdbService();
+
+    private GameDetails? gameDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchGameDetailsByIdAsync();
+    }
+
+    private async Task<IGDB.Models.Game?> GetGameDetailsByIdAsync(long gameId)
+    {
+        return await igdbService.GetGameDetailsBySingleId(gameId);
+    }
+
+    private async Task FetchGameDetailsByIdAsync()
+    {
+        IGDB.Models.Game? singleGameDetails = await GetGameDetailsByIdAsync(GameId);
+
+        IGDB.Models.Artwork? artwork = singleGameDetails?.Artworks?.Values?.FirstOrDefault();
+
+        gameDetails = new GameDetails
+        {
+            GameId = singleGameDetails?.Id,
+            Name = singleGameDetails?.Name,
+            Summary = singleGameDetails?.Summary,
+            ArtworkUrl = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotHuge)
+        };
+    }
+}
