@@ -1,4 +1,5 @@
 ﻿@page "/game-info/{GameId:long}"
+@using GameCatcher.Components.GameInfoComponents
 @using GameCatcher.Models
 @using GameCatcher.Services
 @using IGDB.Models
@@ -17,12 +18,19 @@
     </div>
 </div>
 
+<div class="review-form mb-4">
+    <ReviewForm />
+</div>
+
+<div class="reviews">
+    <h2>Reviews</h2>
+</div>
+
+
 @code {
     [Parameter]
     public long GameId { get; set; }
-
     public IgdbService igdbService = new IgdbService();
-
     private GameDetails? gameDetails;
 
     protected override async Task OnInitializedAsync()

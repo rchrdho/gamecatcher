@@ -1,0 +1,31 @@
+﻿@using GameCatcher.Models
+@using GameCatcher.Services
+@using IGDB.Models
+
+<EditForm Model="@ReviewModel" FormName="ReviewLForm" OnSubmit="@HandleReviewSubmission">
+    <div class="form-group mb-3">
+        <label for="exampleFormControlTextarea1">Write a review...</label>
+        <div class="star-rating">
+            @for (int i = 1; i <= 5; i++)
+            {
+                <span class="star" style="cursor:pointer;font-size:1.8rem;color:#ffc107">&#9733;</span>
+            }
+        </div>
+        <InputTextArea class="form-control" id="exampleFormControlTextarea1" @bind-Value="ReviewModel!.Comment"
+            rows="3" />
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>
+
+
+@code {
+    [SupplyParameterFromForm]
+    private Review? ReviewModel { get; set; }
+
+    protected override void OnInitialized() => ReviewModel ??= new Review();
+
+    private void HandleReviewSubmission()
+    {
+        Console.WriteLine($"Comment: {ReviewModel?.Comment}");
+    }
+}
