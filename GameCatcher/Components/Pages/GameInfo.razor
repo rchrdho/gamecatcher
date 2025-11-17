@@ -1,0 +1,54 @@
+﻿@page "/game/info/{GameId:long}"
+@using GameCatcher.Components.Interfaces
+@using GameCatcher.Models
+@using GameCatcher.Services
+@using IGDB
+
+<div class="card mb-3">
+    <div class="row g-0">
+        <div class="col-md-4">
+            <img src="@gameDetails?.ArtworkImageId" class="img-fluid rounded-start" alt="@gameDetails?.Name artwork">
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <h5 class="card-title">@gameDetails?.Name</h5>
+                <p class="card-text">@gameDetails?.Summary</p>
+                <p class="card-text"><small class="text-muted">Release Date: @gameDetails?.ReleaseDate?.ToString("MMMM dd, yyyy")</small></p>
+                <p class="card-text"><small class="text-muted">Rating: @gameDetails?.Rating</small></p>
+                <p class="card-text"><small class="text-muted">Genre: @gameDetails?.Genre</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ReviewForm GameId="@GameId" />
+
+@code {
+    [Parameter]
+    public long GameId { get; set; }
+    public IGDBService _igdbService = new IGDBService();
+    private Game? gameDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchGameDetailsByIdAsync();
+    }
+
+    private async Task FetchGameDetailsByIdAsync()
+    {
+        IGDB.Models.Game? game = await _igdbService.GetGameBySingleIdAsync(GameId);
+
+        IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
+
+        gameDetails = new Game
+        {
+            GameId = game?.Id,
+            Name = game?.Name,
+            Summary = game?.Summary,
+            ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotHuge),
+            ReleaseDate = game?.FirstReleaseDate,
+            Rating = game?.TotalRating,
+            Genre = game?.Genres?.Values?.FirstOrDefault()?.Name ?? "N/A"
+        };
+    }
+}

@@ -1,0 +1,36 @@
+﻿@using GameCatcher.Models
+@using GameCatcher.Services
+@using GameCatcher.Data
+
+<div>
+    <EditForm Model="Review" OnSubmit="SubmitReview" FormName="reivew">
+        <div class="form-group mb-3">
+            <label for="Review.Comment">Write a review....</label>
+            <InputTextArea @bind-Value="Review.Comment" class="form-control" id="Review.Comment" />
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </EditForm>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Review Review { get; set; } = new();
+
+    [Parameter]
+    public long GameId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Review.GameId = GameId;
+        await SubmitReview();
+    }
+
+    public async Task SubmitReview()
+    {
+        // TODO: Handle Review Logic
+
+        // Print for now
+        Console.WriteLine($"Comment: {Review.Comment}");
+        Console.WriteLine($"GameId: {Review.GameId}");
+    }
+}
