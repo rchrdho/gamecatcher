@@ -3,6 +3,9 @@
 @using GameCatcher.Models
 @using GameCatcher.Services
 @using IGDB
+@using Microsoft.AspNetCore.Authorization
+
+@rendermode InteractiveServer
 
 <div class="card mb-3">
     <div class="row g-0">
@@ -13,19 +16,34 @@
             <div class="card-body">
                 <h5 class="card-title">@gameDetails?.Name</h5>
                 <p class="card-text">@gameDetails?.Summary</p>
-                <p class="card-text"><small class="text-muted">Release Date: @gameDetails?.ReleaseDate?.ToString("MMMM dd, yyyy")</small></p>
+                <p class="card-text"><small class="text-muted">Release Date: @gameDetails?.ReleaseDate?.ToString("MMMM                        dd, yyyy")</small></p>
                 <p class="card-text"><small class="text-muted">Rating: @gameDetails?.Rating</small></p>
                 <p class="card-text"><small class="text-muted">Genre: @gameDetails?.Genre</small></p>
+                <AuthorizeView>
+                    <Authorized>
+                        <button @onclick="ShowReviewForm" class="btn btn-primary">
+                            Add Review
+                        </button>
+                    </Authorized>
+                    <NotAuthorized>
+                        <p>Please login or register an account to add a review.</p>
+                    </NotAuthorized>
+                </AuthorizeView>
             </div>
         </div>
     </div>
 </div>
 
-<ReviewForm GameId="@GameId" />
+@if (showReviewForm)
+{
+    <ReviewForm GameId="@GameId" />
+}
 
 @code {
     [Parameter]
     public long GameId { get; set; }
+
+    private bool showReviewForm = false;
 
     public IGDBService _igdbService = new IGDBService();
     private Game? gameDetails;
@@ -51,5 +69,10 @@
             Rating = game?.TotalRating,
             Genre = game?.Genres?.Values?.FirstOrDefault()?.Name ?? "N/A"
         };
+    }
+
+    private void ShowReviewForm()
+    {
+        showReviewForm = true;
     }
 }
