@@ -1,5 +1,5 @@
 ﻿@page "/game/info/{GameId:long}"
-@using GameCatcher.Components.Interfaces
+@using GameCatcher.Components.Review
 @using GameCatcher.Models
 @using GameCatcher.Services
 @using IGDB
@@ -38,6 +38,8 @@
 {
     <ReviewForm GameId="@GameId" />
 }
+
+<ReviewList GameId="@GameId" />
 
 @code {
     [Parameter]

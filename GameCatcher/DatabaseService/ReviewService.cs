@@ -1,6 +1,7 @@
 using System;
 using GameCatcher.Data;
 using GameCatcher.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace GameCatcher.DatabaseService;
 
@@ -28,5 +29,10 @@ public class ReviewService : IReviewService
             _dbContext.Reviews.Remove(review);
             await _dbContext.SaveChangesAsync();
         }
+    }
+
+    public async Task<List<Review>> GetReviewsByGameId(long gameId)
+    {
+        return await _dbContext.Reviews.Where(r => r.GameId == gameId).ToListAsync();
     }
 }
