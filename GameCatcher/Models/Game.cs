@@ -1,10 +1,12 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using IGDB;
 
 namespace GameCatcher.Models;
 
 public class Game
 {
+    [Key]
     public long? GameId { get; set; }
     public string? Name { get; set; }
     public string? Summary { get; set; }
