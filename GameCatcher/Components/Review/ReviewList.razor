@@ -1,0 +1,38 @@
+﻿@using GameCatcher.DatabaseService
+@using GameCatcher.Models
+
+@inject GameCatcher.DatabaseService.IReviewService _reviewDbService
+
+@if (reviews.Count == 0)
+{
+    <p>No reviews yet. Be the first to review this game!</p>
+}
+else
+{
+    @foreach (var review in reviews)
+    {
+        <div class="card mt-3">
+            <div class="card-header">
+                @review.UserId
+                <span class="text-muted">- @review.CreatedAt.ToString("MMMM dd, yyyy")</span>
+                <span class="float-end">Rating: @review.Rating</span>
+            </div>
+            <div class="card-body">
+                <p class="card-text">@review.Comment</p>
+            </div>
+        </div>
+    }
+}
+
+
+@code {
+    [Parameter]
+    public long GameId { get; set; }
+
+    private List<Review> reviews = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        reviews = await _reviewDbService.GetReviewsByGameId(GameId);
+    }
+}

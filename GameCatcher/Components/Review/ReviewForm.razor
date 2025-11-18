@@ -1,0 +1,50 @@
+﻿@using GameCatcher.Models
+@using GameCatcher.Services
+@using GameCatcher.Data
+@using System.Security.Claims
+@using Mono.TextTemplating
+
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject GameCatcher.DatabaseService.IReviewService _reviewDbService
+
+<div>
+    <EditForm Model="Review" OnSubmit="SubmitReview" FormName="reviewForm">
+        <div class="form-group mb-3">
+            <label for="Review.Comment">Write a review....</label>
+            <InputTextArea @bind-Value="Review.Comment" class="form-control" id="Review.Comment" />
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </EditForm>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Review Review { get; set; } = new();
+
+    [Parameter]
+    public long GameId { get; set; }
+
+    public async Task SubmitReview()
+    {
+        await InsertReview();
+
+        StateHasChanged();
+    }
+
+    private async Task InsertReview()
+    {
+
+        AuthenticationState? authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        ClaimsPrincipal? user = authState.User;
+
+        Review.GameId = GameId;
+        Review.UserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        Review.Comment = Review.Comment?.Trim();
+        Review.Rating = 1.8;
+        Review.CreatedAt = DateTime.Now;
+        Review.UpdatedAt = DateTime.Now;
+
+
+        await _reviewDbService.AddReview(Review);
+    }
+}
