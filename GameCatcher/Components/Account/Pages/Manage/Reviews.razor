@@ -1,0 +1,46 @@
+﻿@page "/Account/Manage/Reviews"
+
+@using GameCatcher.Data
+@using GameCatcher.Models
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject GameCatcher.DatabaseService.IReviewService ReviewDbService
+
+<h3>Your Reviews</h3>
+
+@if (userReviews.Count == 0)
+{
+    <p>You have not submitted any reviews yet.</p>
+}
+else
+{
+    @foreach (var review in userReviews)
+    {
+        <div class="card mt-3">
+            <div class="card-header">
+                Game ID: @review.GameId
+                <span class="text-muted">- @review.CreatedAt.ToString("MMMM dd, yyyy")</span>
+                <span class="float-end">Rating: @review.Rating</span>
+            </div>
+            <div class="card-body">
+                <p class="card-text">@review.Comment</p>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<Review> userReviews = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userPrincipal = authState.User;
+        var userId = userPrincipal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+        {
+            userReviews = await ReviewDbService.GetReviewsByUserId(userId);
+        }
+    }
+}

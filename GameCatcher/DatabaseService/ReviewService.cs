@@ -35,4 +35,9 @@ public class ReviewService : IReviewService
     {
         return await _dbContext.Reviews.Where(r => r.GameId == gameId).ToListAsync();
     }
+
+    public async Task<List<Review>> GetReviewsByUserId(string userId)
+    {
+        return await _dbContext.Reviews.Where(r => r.UserId == userId).ToListAsync();
+    }
 }

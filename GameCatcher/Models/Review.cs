@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using GameCatcher.Data;
 
 namespace GameCatcher.Models;
 
@@ -13,6 +14,6 @@ public class Review
     public DateTime CreatedAt { get; set; }
 
     // User relation
-    public User? Author { get; set; }
+    public ApplicationUser? Author { get; set; }
     public string? UserId { get; set; }
 }
