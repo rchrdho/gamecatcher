@@ -38,6 +38,6 @@ public class FriendService : IFriendService
             .Include(u => u.Friends)
             .ToListAsync();
 
-        return users;
+        return users.FirstOrDefault()!.Friends!.ToList();
     }
 }
