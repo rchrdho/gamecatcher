@@ -65,6 +65,19 @@ public class IGDBService
         return games;
     }
 
+    public async Task<List<IGDB.Models.Game>> SearchGamesAsync(string searchTerm, int limit = 20)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return new List<IGDB.Models.Game>();
+
+        // Escape special characters and prepare search term
+        var escapedTerm = searchTerm.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        var query = $"fields {GameQueryFields}; search \"{escapedTerm}\"; limit {limit};";
+        
+        var games = await QueryWithRetryAsync<IGDB.Models.Game>(IGDBGameEndpoint, query);
+        return games;
+    }
+
     private async Task<List<T>> QueryWithRetryAsync<T>(
         string endpoint,
         string query,
