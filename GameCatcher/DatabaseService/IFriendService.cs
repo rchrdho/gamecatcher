@@ -9,7 +9,5 @@ public interface IFriendService
 
     Task RemoveFriend(string userId, string friendId);
 
-    Task<ApplicationUser> FindFriendById(string friendId);
-
     Task<List<ApplicationUser>> GetFriendsByUserId(string userId);
 }

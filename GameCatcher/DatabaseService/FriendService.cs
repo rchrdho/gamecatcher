@@ -13,25 +13,31 @@ public class FriendService : IFriendService
         _dbContext = gameCatcherDbContext;
     }
 
-    public Task AddFriend(string userId, string friendId)
+    public async Task AddFriend(string userId, string friendId)
     {
-        throw new NotImplementedException();
+        await _dbContext.Database.ExecuteSqlRawAsync(
+            "INSERT INTO UserFriends (FriendsId, FriendOfId) VALUES ({0}, {1})",
+            friendId,
+            userId
+        );
     }
 
-    public Task RemoveFriend(string userId, string friendId)
+    public async Task RemoveFriend(string userId, string friendId)
     {
-        throw new NotImplementedException();
-    }
-
-    public async Task<ApplicationUser> FindFriendById(string friendId)
-    {
-        var user =
-            await _dbContext.Users.FindAsync(friendId) ?? throw new Exception("User not found");
-        return user;
+        await _dbContext.Database.ExecuteSqlRawAsync(
+            "DELETE FROM UserFriends WHERE FriendsId = {0} AND FriendOfId = {1}",
+            friendId,
+            userId
+        );
     }
 
     public async Task<List<ApplicationUser>> GetFriendsByUserId(string userId)
     {
-        return await _dbContext.Users.Where(u => u.Friends!.Any(f => f.Id == userId)).ToListAsync();
+        var users = await _dbContext
+            .Users.Where(u => u.Id == userId)
+            .Include(u => u.Friends)
+            .ToListAsync();
+
+        return users;
     }
 }

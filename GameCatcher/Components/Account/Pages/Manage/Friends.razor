@@ -30,7 +30,7 @@ else
         @foreach (var friend in friends)
         {
             <li class="list-group-item">
-                @friend.UserName (@friend.Email)
+                @friend.UserName
             </li>
         }
     </ul>
@@ -43,21 +43,25 @@ else
     [SupplyParameterFromForm]
     private FriendInputModel Friend { get; set; } = new();
 
+    public string UserId { get; set; } = "";
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userPrincipal = authState.User;
         var userId = userPrincipal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        if (userId != null)
+        UserId = userId ?? "";
+
+        if (!string.IsNullOrEmpty(UserId))
         {
-            friends = await FriendService.GetFriendsByUserId(userId);
+            friends = await FriendService.GetFriendsByUserId(UserId);
         }
     }
 
     private async Task HandleAddFriend()
     {
-        Console.WriteLine($"Adding friend with ID: {Friend.FriendId}");
+        await FriendService.AddFriend(UserId, Friend.FriendId);
     }
 
     public class FriendInputModel

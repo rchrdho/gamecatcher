@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using GameCatcher.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -8,5 +9,6 @@ public class ApplicationUser : IdentityUser
 {
     public string? ProfilePictureUrl { get; set; }
     public List<Review>? Reviews { get; set; }
-    public List<ApplicationUser>? Friends { get; set; }
+    public virtual ICollection<ApplicationUser>? Friends { get; set; }
+    public virtual ICollection<ApplicationUser>? FriendOf { get; set; }
 }
