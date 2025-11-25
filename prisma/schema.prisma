@@ -19,10 +19,6 @@ model User {
   birthDate        DateTime?
   registrationDate DateTime  @default(dbgenerated("timezone('UTC'::text, now())"))
 
-  emailChanges       EmailChange[]
-  emailVerifications EmailVerification[]
-  passwordResets     PasswordReset[]
-
   playedGames Game[]
   favourites  Game[] @relation("favouritedGames")
 
@@ -33,11 +29,9 @@ model User {
   reviews      Review[]
   reviewTags   ReviewUserTag[]
   userTags     UserTag[]
-  gameStatuses GameStatus[]
 
   uploadedImages Image[]             @relation("user_uploaded_images")
   ReviewComment  ReviewComment[]
-  GameUser       GameUser[]
 
   @@index([displayName])
 }
@@ -108,61 +102,6 @@ model Review {
   @@index([gameId])
 }
 
-model ReviewComment {
-  id        Int      @id @default(autoincrement())
-  content   String
-  createdAt DateTime @default(now())
-
-  reviewId Int
-  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-
-  userId Int
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([reviewId])
-  @@index([userId])
-}
-
-model GameUser {
-  id       Int            @id @default(autoincrement())
-  userId   Int
-  gameId   Int
-  progress ProgressStatus @default(WISHLIST)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, gameId]) // prevent duplicate game-user relations
-  @@index([progress])
-}
-
-enum ProgressStatus {
-  WISHLIST
-  PLAYING
-  COMPLETED
-  ON_HOLD
-  DROPPED
-  REPLAYING
-}
-
-model GameStatus {
-  id     Int            @id @default(autoincrement())
-  type   GameStatusType
-  games  Game[]         @relation("game_statuses")
-  userId Int
-  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, type]) // each user can only assign one status per type
-}
-
-enum GameStatusType {
-  UPCOMING
-  TRENDING
-  TOP
-  CLASSIC
-  NEW_RELEASE
-}
-
 model UserTag {
   id    Int    @id @default(autoincrement())
   label String @unique
@@ -188,60 +127,6 @@ model ReviewUserTag {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, userId, label])
-}
-
-model Developer {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  games Game[] @relation("game_developers")
-}
-
-model Publisher {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  games Game[] @relation("game_publishers")
-}
-
-model GameImage {
-  id     Int    @id @default(autoincrement())
-  url    String
-  gameId Int
-  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
-
-  @@index([gameId])
-}
-
-model EmailChange {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  newEmail  String
-  token     String   @unique
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
-model EmailVerification {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-
-  @@index([userId])
-}
-
-model PasswordReset {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-
-  @@index([userId])
 }
 
 model Friendship {
@@ -273,16 +158,4 @@ model UserGroup {
   users User[]
 
   @@unique([name])
-}
-
-model Genre {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  games Game[] @relation("game_genres")
-}
-
-model Platform {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  games Game[] @relation("game_platforms")
 }
