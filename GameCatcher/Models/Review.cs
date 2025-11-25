@@ -8,7 +8,7 @@ public class Review
 {
     [Key]
     public int ReviewId { get; set; }
-    public long? GameId { get; set; }
+    public long GameId { get; set; }
     public string? Comment { get; set; }
     public double? Rating { get; set; }
     public DateTime CreatedAt { get; set; }

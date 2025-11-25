@@ -1,5 +1,7 @@
 ﻿@page "/Account/Manage/Reviews"
 
+@using GameCatcher.Services
+@using IGDB
 @using GameCatcher.Data
 @using GameCatcher.Models
 
@@ -18,7 +20,7 @@ else
     {
         <div class="card mt-3">
             <div class="card-header">
-                Game ID: @review.GameId
+                <a href="/game/info/@review.GameId">@gameDetails?.Name</a>
                 <span class="text-muted">- @review.CreatedAt.ToString("MMMM dd, yyyy")</span>
                 <span class="float-end">Rating: @review.Rating</span>
             </div>
@@ -32,6 +34,10 @@ else
 @code {
     private List<Review> userReviews = new();
 
+    private IGDBService _igdbService = new();
+
+    private Game? gameDetails;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -41,6 +47,23 @@ else
         if (userId != null)
         {
             userReviews = await ReviewDbService.GetReviewsByUserId(userId);
+        }
+
+        await FetchGameName();
+    }
+
+    private async Task FetchGameName()
+    {
+        foreach (var review in userReviews)
+        {
+            IGDB.Models.Game? game = await _igdbService.GetGameBySingleIdAsync(review.GameId);
+            IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
+
+            gameDetails = new Game
+            {
+                Name = game?.Name,
+                ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.CoverSmall)
+            };
         }
     }
 }
