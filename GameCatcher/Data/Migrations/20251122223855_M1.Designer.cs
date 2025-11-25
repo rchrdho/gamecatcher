@@ -3,6 +3,7 @@ using System;
 using GameCatcher.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,27 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GameCatcher.Data.Migrations
 {
     [DbContext(typeof(GameCatcherDbContext))]
-    partial class GameCatcherDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251122223855_M1")]
+    partial class M1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
-
-            modelBuilder.Entity("ApplicationUserApplicationUser", b =>
-                {
-                    b.Property<string>("FriendOfId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FriendsId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("FriendOfId", "FriendsId");
-
-                    b.HasIndex("FriendsId");
-
-                    b.ToTable("UserFriends", (string)null);
-                });
 
             modelBuilder.Entity("GameCatcher.Data.ApplicationUser", b =>
                 {
@@ -287,19 +275,19 @@ namespace GameCatcher.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("ApplicationUserApplicationUser", b =>
+            modelBuilder.Entity("UserFriend", b =>
                 {
-                    b.HasOne("GameCatcher.Data.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("FriendOfId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<string>("FriendId")
+                        .HasColumnType("TEXT");
 
-                    b.HasOne("GameCatcher.Data.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("FriendsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("FriendId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserFriend");
                 });
 
             modelBuilder.Entity("GameCatcher.Models.Review", b =>
@@ -356,6 +344,21 @@ namespace GameCatcher.Data.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
+                    b.HasOne("GameCatcher.Data.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("UserFriend", b =>
+                {
+                    b.HasOne("GameCatcher.Data.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("FriendId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GameCatcher.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")

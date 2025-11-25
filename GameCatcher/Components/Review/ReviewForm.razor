@@ -42,8 +42,6 @@
         Review.Comment = Review.Comment?.Trim();
         Review.Rating = 1.8;
         Review.CreatedAt = DateTime.Now;
-        Review.UpdatedAt = DateTime.Now;
-
 
         await _reviewDbService.AddReview(Review);
     }
