@@ -2,15 +2,21 @@
 
 @inject NavigationManager NavigationManager
 
+@rendermode InteractiveServer
+
 <div onclick="document.querySelector('.navbar-toggle').click()">
     <nav class="navbar navbar-expand-lg bg-secondary mb-4">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">GameCatcher</a>
             <div class="mx-auto">
-                <form class="d-flex" role="search">
-                    <input class="form-control me-2 search-bar" type="search" placeholder="Search"
-                        aria-label="Search" />
-                </form>
+                <div class="d-flex" role="search" @onclick:stopPropagation="true">
+                    <input @bind="searchTerm" @bind:event="oninput" @onkeypress="HandleSearchKeyPress"
+                           class="form-control me-2 search-bar" type="search" placeholder="Search"
+                           aria-label="Search" />
+                    <button @onclick="HandleSearch" class="btn btn-outline-light" type="button">
+                        Search
+                    </button>
+                </div>
             </div>
             <AuthorizeView>
                 <Authorized>
@@ -36,6 +42,7 @@
 
 @code {
     private string? currentUrl;
+    private string searchTerm = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -47,6 +54,24 @@
     {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
         StateHasChanged();
+    }
+
+    private void HandleSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            HandleSearch();
+        }
+    }
+
+    private void HandleSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var url = $"/search?q={Uri.EscapeDataString(searchTerm.Trim())}";
+            NavigationManager.NavigateTo(url);
+            searchTerm = string.Empty; // Clear search after navigation
+        }
     }
 
     public void Dispose()
