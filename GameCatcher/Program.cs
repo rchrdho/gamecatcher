@@ -48,6 +48,7 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IFriendService, FriendService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 

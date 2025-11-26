@@ -19,13 +19,34 @@ else
     @foreach (var review in userReviews)
     {
         <div class="card mt-3">
-            <div class="card-header">
-                <a href="/game/info/@review.GameId">@gameDetails?.Name</a>
-                <span class="text-muted">- @review.CreatedAt.ToString("MMMM dd, yyyy")</span>
-                <span class="float-end">Rating: @review.Rating</span>
-            </div>
-            <div class="card-body">
-                <p class="card-text">@review.Comment</p>
+            <div class="row g-0">
+                @* double foreach loop and if check to ensure right name and artwork are displayed based on gameId (a bit wacky but it works, can find better way later)*@
+                <div class="col-md-4" style="max-width: 250px">
+                    @foreach (var gameIdGameArtwork in GameIdGameArtwork)
+                    {
+                        @if (review.GameId == gameIdGameArtwork.Key)
+                        {
+                            <img src="@gameIdGameArtwork.Value" class="img-fluid rounded-start" alt="@gameIdGameArtwork.Value">
+                        }
+                    }
+                </div>
+                <div class="col-md-8">
+                    <div class="card-body">
+                        @foreach (var gameIdGameName in GameIdGameName)
+                        {
+                            @if (review.GameId == gameIdGameName.Key)
+                            {
+                                <a href="/game/info/@review.GameId">
+                                    <h5 class="card-title">@gameIdGameName.Value</h5>
+                                </a>
+                            }
+                        }
+                        <small class="text-body-secondary">Review On:
+                            @review.CreatedAt.ToString(format: "MMMM dd, yyyy")</small>
+                        <p class="card-text">Rating: @review.Rating</p>
+                        <p class=" card-text">@review.Comment</p>
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -36,7 +57,10 @@ else
 
     private IGDBService _igdbService = new();
 
-    private Game? gameDetails;
+    private Game? Game { get; set; }
+
+    private Dictionary<long, string> GameIdGameName = new Dictionary<long, string>();
+    private Dictionary<long, string> GameIdGameArtwork = new Dictionary<long, string>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -59,11 +83,14 @@ else
             IGDB.Models.Game? game = await _igdbService.GetGameBySingleIdAsync(review.GameId);
             IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
 
-            gameDetails = new Game
+            Game = new Game
             {
                 Name = game?.Name,
-                ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.CoverSmall)
+                ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotMed)
             };
+
+            GameIdGameName.Add(review.GameId, Game!.Name!);
+            GameIdGameArtwork.Add(review.GameId, Game!.ArtworkImageId);
         }
     }
 }

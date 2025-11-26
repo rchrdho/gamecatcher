@@ -41,11 +41,6 @@ public class IGDBService
 
     public async Task<IGDB.Models.Game> GetGameBySingleIdAsync(long gameId)
     {
-        // var game = await _igdbClient.QueryAsync<IGDB.Models.Game>(
-        //     IGDBGameEndpoint,
-        //     query: $"fields {GameQueryFields}; where id = {gameId}"
-        // );
-
         var query = $"fields {GameQueryFields}; where id = {gameId};";
         var game = await QueryWithRetryAsync<IGDB.Models.Game>(IGDBGameEndpoint, query);
 
@@ -73,7 +68,7 @@ public class IGDBService
         // Escape special characters and prepare search term
         var escapedTerm = searchTerm.Replace("\\", "\\\\").Replace("\"", "\\\"");
         var query = $"fields {GameQueryFields}; search \"{escapedTerm}\"; limit {limit};";
-        
+
         var games = await QueryWithRetryAsync<IGDB.Models.Game>(IGDBGameEndpoint, query);
         return games;
     }
