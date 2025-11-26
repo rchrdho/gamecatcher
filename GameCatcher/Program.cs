@@ -23,16 +23,15 @@ builder.Services.AddScoped<
 >();
 
 builder
-    .Services
-    .AddAuthentication(options =>
+    .Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddGoogle(googleOptions =>
     {
-        googleOptions.ClientId = Environment.GetEnvironmentVariable("OAUTH_CLIENT_ID");
-        googleOptions.ClientSecret = Environment.GetEnvironmentVariable("OAUTH_CLIENT_SECRET");
+        googleOptions.ClientId = Environment.GetEnvironmentVariable("OAUTH_CLIENT_ID")!;
+        googleOptions.ClientSecret = Environment.GetEnvironmentVariable("OAUTH_CLIENT_SECRET")!;
     })
     .AddIdentityCookies();
 
