@@ -2,6 +2,7 @@
 @using GameCatcher.Models
 
 @inject GameCatcher.DatabaseService.IReviewService _reviewDbService
+@inject GameCatcher.DatabaseService.IUserService _userService
 
 @if (reviews.Count == 0)
 {
@@ -12,10 +13,15 @@ else
     @foreach (var review in reviews)
     {
         <div class="card mt-3">
-            <div class="card-header">
-                @review.UserId
-                <span class="text-muted">- @review.CreatedAt.ToString("MMMM dd, yyyy")</span>
-                <span class="float-end">Rating: @review.Rating</span>
+            <div class="card-header"> Reviewed by: @GetUserNameById(review.UserId!)
+                <span class="text-muted"> - @review.CreatedAt.ToString(format: "MMMM dd, yyyy")</span>
+                <span class="float-end">
+                    <i class="bi @(review.Rating >= 1 ? "bi-star-fill" : "bi-star") text-warning"></i>
+                    <i class="bi @(review.Rating >= 2 ? "bi-star-fill" : "bi-star") text-warning"></i>
+                    <i class="bi @(review.Rating >= 3 ? "bi-star-fill" : "bi-star") text-warning"></i>
+                    <i class="bi @(review.Rating >= 4 ? "bi-star-fill" : "bi-star") text-warning"></i>
+                    <i class="bi @(review.Rating >= 5 ? "bi-star-fill" : "bi-star") text-warning"></i>
+                </span>
             </div>
             <div class="card-body">
                 <p class="card-text">@review.Comment</p>
@@ -33,6 +39,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+
         reviews = await _reviewDbService.GetReviewsByGameId(GameId);
+    }
+
+    private string GetUserNameById(string userId)
+    {
+        var user = _userService.GetUserByIdAsync(userId).Result;
+
+        return user?.UserName ?? "Unknown User";
     }
 }
