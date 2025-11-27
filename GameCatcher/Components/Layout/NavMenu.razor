@@ -5,9 +5,9 @@
 @rendermode InteractiveServer
 
 <div onclick="document.querySelector('.navbar-toggle').click()">
-    <nav class="navbar navbar-expand-lg bg-secondary mb-4">
+    <nav class="navbar navbar-expand-lg mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">GameCatcher</a>
+            <a class="navbar-brand text-white" href="/">GameCatcher</a>
             <div class="mx-auto">
                 <div class="d-flex" role="search" @onclick:stopPropagation="true">
                     <input @bind="searchTerm" @bind:event="oninput" @onkeypress="HandleSearchKeyPress"
@@ -20,8 +20,8 @@
             </div>
             <AuthorizeView>
                 <Authorized>
-                    <div class="d-flex">
-                        <a class="btn" href="Account/Manage">@context.User.Identity?.Name</a>
+                    <div class="d-flex align-items-center">
+                        <a class="btn text-white" href="Account/Manage">@context.User.Identity?.Name</a>
                         <form action="Account/Logout" method="post">
                             <AntiforgeryToken />
                             <input type="hidden" name="ReturnUrl" value="@currentUrl" />
