@@ -23,18 +23,20 @@ builder.Services.AddScoped<
 >();
 
 builder
-    .Services
-    .AddAuthentication(options =>
+    .Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
+    .AddIdentityCookies();
+
+builder
+    .Services.AddAuthentication()
     .AddGoogle(googleOptions =>
     {
-        googleOptions.ClientId = Environment.GetEnvironmentVariable("OAUTH_CLIENT_ID");
-        googleOptions.ClientSecret = Environment.GetEnvironmentVariable("OAUTH_CLIENT_SECRET");
-    })
-    .AddIdentityCookies();
+        googleOptions.ClientId = Environment.GetEnvironmentVariable("OAUTH_CLIENT_ID")!;
+        googleOptions.ClientSecret = Environment.GetEnvironmentVariable("OAUTH_CLIENT_SECRET")!;
+    });
 
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
@@ -54,6 +56,7 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IFriendService, FriendService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 
