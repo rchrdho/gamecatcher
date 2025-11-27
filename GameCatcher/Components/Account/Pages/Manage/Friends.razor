@@ -26,14 +26,28 @@
 }
 else
 {
-    <ul class="list-group">
-        @foreach (var friend in friends)
-        {
-            <li class="list-group-item">
-                @friend.UserName
-            </li>
-        }
-    </ul>
+    @foreach (var friend in friends)
+    {
+        <div class="card mb-3 p-2">
+            <div class="row g-0">
+                <div class="col-md-1">
+                    <img src="image/default_user_profile_pic.jpg" class="img-thumbnail rounded-start" alt="..."
+                        style="width: 100px">
+                </div>
+                <div class="col-md-9 d-flex align-items-center">
+                    <div class="card-body">
+                        <p class="card-title">@friend.UserName</p>
+                        <a href="/Friend/Profile/@friend.UserName"  class="stretched-link" />
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-center">
+                    <div class="card-body">
+                        <button class="btn btn-danger" @onclick="RemoveFriend">Remove Friend</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -67,5 +81,10 @@ else
     public class FriendInputModel
     {
         public string FriendId { get; set; } = "";
+    }
+
+    private void RemoveFriend()
+    {
+        Console.WriteLine("Remove Friend clicked");
     }
 }

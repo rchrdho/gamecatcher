@@ -1,0 +1,10 @@
+﻿@page "/Friend/Profile/{FriendUserName}"
+
+@rendermode InteractiveServer
+
+<h3>FriendProfile</h3>
+
+@code {
+    [Parameter]
+    public string? FriendUserName { get; set; }
+}
