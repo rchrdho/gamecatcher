@@ -1,0 +1,193 @@
+@page "/search"
+@page "/search/{searchTerm}"
+@using GameCatcher.Models
+@using GameCatcher.Services
+@using IGDB
+
+@inject NavigationManager Navigation
+
+@rendermode InteractiveServer
+
+<PageTitle>Search - GameCatcher</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Searching games...</p>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(SearchTerm) && searchResults != null)
+            {
+                @if (searchResults.Any())
+                {
+                    <div class="mb-3">
+                        <h4>Search Results for "@SearchTerm" (@searchResults.Count results)</h4>
+                    </div>
+                    
+                    <div class="row">
+                        @foreach (var game in searchResults)
+                        {
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100">
+                                    <img src="@game.ArtworkImageId" class="card-img-top" alt="@game.Name artwork" 
+                                         style="height: 200px; object-fit: cover;" />
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title">@game.Name</h5>
+                                        <p class="card-text flex-grow-1">
+                                            @if (!string.IsNullOrWhiteSpace(game.Summary))
+                                            {
+                                                @(game.Summary.Length > 100 ? game.Summary.Substring(0, 100) + "..." : game.Summary)
+                                            }
+                                            else
+                                            {
+                                                <text>No description available.</text>
+                                            }
+                                        </p>
+                                        @if (game.ReleaseDate.HasValue)
+                                        {
+                                            <small class="text-muted mb-2">
+                                                Released: @game.ReleaseDate.Value.ToString("MMM dd, yyyy")
+                                            </small>
+                                        }
+                                        @if (game.Rating.HasValue)
+                                        {
+                                            <small class="text-muted mb-2">
+                                                Rating: @game.Rating.Value.ToString("F1")/100
+                                            </small>
+                                        }
+                                        <a href="/game/info/@game.GameId" class="btn btn-primary mt-auto">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center">
+                        <p class="lead">No games found for "@SearchTerm"</p>
+                        <p>Try searching with different keywords or check your spelling.</p>
+                    </div>
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                <div class="text-center">
+                    <p class="lead">Enter a game name to start searching</p>
+                    <p>Search through thousands of games from the IGDB database.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? SearchTerm { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? q { get; set; }
+
+    private string currentSearchTerm = string.Empty;
+    private List<Game>? searchResults;
+    private bool isLoading = false;
+    private IGDBService _igdbService = new IGDBService();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize search term from query parameter or route parameter
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            currentSearchTerm = q;
+            SearchTerm = q;
+            await PerformSearch();
+        }
+        else if (!string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            currentSearchTerm = SearchTerm;
+            await PerformSearch();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Handle query parameter changes from navigation
+        if (!string.IsNullOrWhiteSpace(q) && q != currentSearchTerm)
+        {
+            currentSearchTerm = q;
+            SearchTerm = q;
+            await PerformSearch();
+        }
+        else if (!string.IsNullOrWhiteSpace(SearchTerm) && SearchTerm != currentSearchTerm)
+        {
+            currentSearchTerm = SearchTerm;
+            await PerformSearch();
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await PerformSearchFromInput();
+        }
+    }
+
+    private async Task PerformSearchFromInput()
+    {
+        if (!string.IsNullOrWhiteSpace(currentSearchTerm))
+        {
+            // Update URL with new search term
+            Navigation.NavigateTo($"/search?q={Uri.EscapeDataString(currentSearchTerm.Trim())}");
+        }
+    }
+
+    private async Task PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(currentSearchTerm) || isLoading)
+            return;
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            List<IGDB.Models.Game>? igdbGames = await _igdbService.SearchGamesAsync(currentSearchTerm.Trim(), 24);
+            
+            searchResults = igdbGames.Select(gameDetails =>
+            {
+                IGDB.Models.Artwork? artwork = gameDetails?.Artworks?.Values?.FirstOrDefault(a => !string.IsNullOrEmpty(a?.ImageId));
+                return new Game
+                {
+                    GameId = gameDetails?.Id,
+                    Name = gameDetails?.Name,
+                    Summary = gameDetails?.Summary,
+                    ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.CoverBig),
+                    ReleaseDate = gameDetails?.FirstReleaseDate,
+                    Rating = gameDetails?.TotalRating,
+                    Genre = gameDetails?.Genres?.Values?.FirstOrDefault()?.Name ?? "Unknown"
+                };
+            }).ToList();
+
+            // Update the URL to reflect the current search
+            SearchTerm = currentSearchTerm.Trim();
+        }
+        catch (Exception ex)
+        {
+            // Handle search errors
+            searchResults = new List<Game>();
+            Console.WriteLine($"Search error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

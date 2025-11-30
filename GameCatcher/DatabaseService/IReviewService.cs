@@ -10,4 +10,6 @@ public interface IReviewService
     Task RemoveReview(int reviewId);
 
     Task<List<Review>> GetReviewsByGameId(long gameId);
+
+    Task<List<Review>> GetReviewsByUserId(string userId);
 }

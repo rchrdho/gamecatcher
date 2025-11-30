@@ -1,0 +1,93 @@
+﻿@page "/Account/Manage/Friends"
+
+@using GameCatcher.Data
+@using GameCatcher.DatabaseService
+@using Microsoft.AspNetCore.Identity
+@inject NavigationManager NavigationManager
+@inject UserManager<ApplicationUser> UserManager
+@inject GameCatcher.DatabaseService.IFriendService FriendService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Friends</PageTitle>
+
+<h3>Friends</h3>
+
+<div class="mb-4">
+    <EditForm Model="Friend" OnSubmit="HandleAddFriend" FormName="addFriend">
+        <InputText id="friendId" class="form-control d-inline-block w-75" placeholder="Enter friend's User ID"
+            @bind-Value="Friend.FriendId" />
+        <button type="submit" class="btn btn-primary ms-2">Add Friend</button>
+    </EditForm>
+</div>
+
+@if (friends.Count == 0)
+{
+    <p>You have no friends added yet.</p>
+}
+else
+{
+    @foreach (var friend in friends)
+    {
+        <div class="card mb-3 p-2">
+            <div class="row g-0">
+                <div class="col-md-1 d-flex align-items-center">
+                    <img src="image/default_user_profile_pic.jpg" class="img-thumbnail rounded-start" alt="..."
+                        style="width: 100px">
+                </div>
+                <div class="col-md-9 d-flex align-items-center">
+                    <div class="card-body">
+                        <p class="card-title">@friend.UserName</p>
+                        <a href="/Friend/Profile/@friend.Id" class="stretched-link" />
+                    </div>
+                </div>
+                @* <div class="col-md-2 d-flex align-items-center">
+                    <div class="card-body">
+                        <button class="btn btn-danger"
+                            @onclick="async () => { Friend.FriendId = friend.Id; await RemoveFriend(); }">
+                            Remove Friend
+                        </button>
+                    </div>
+                </div> *@
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private ApplicationUser user = default!;
+    private List<ApplicationUser> friends = new();
+
+    [SupplyParameterFromForm]
+    private FriendInputModel Friend { get; set; } = new();
+
+    public string UserId { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userPrincipal = authState.User;
+        var userId = userPrincipal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        UserId = userId ?? "";
+
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            friends = await FriendService.GetFriendsByUserId(UserId);
+        }
+    }
+
+    private async Task HandleAddFriend()
+    {
+        await FriendService.AddFriend(UserId, Friend.FriendId);
+    }
+
+    public class FriendInputModel
+    {
+        public string FriendId { get; set; } = "";
+    }
+
+    private async Task RemoveFriend()
+    {
+        await FriendService.RemoveFriend(UserId, Friend.FriendId);
+    }
+}

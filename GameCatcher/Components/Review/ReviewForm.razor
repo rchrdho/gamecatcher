@@ -10,11 +10,34 @@
 <div>
     <EditForm Model="Review" OnSubmit="SubmitReview" FormName="reviewForm">
         <div class="form-group mb-3">
-            <label for="Review.Comment">Write a review....</label>
-            <InputTextArea @bind-Value="Review.Comment" class="form-control" id="Review.Comment" />
+            <label for="Review.Comment" class="text-white">Write a review....</label>
+            <div class="d-flex align-items-center">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    var starValue = i;
+                    <button type="button" class="btn p-0 me-1 shadow-none" @onclick="() => SetRating(starValue)">
+                        <i class="bi @(Review.Rating >= starValue ? "bi-star-fill" : "bi-star") text-warning"></i>
+                    </button>
+                }
+                <span class="ms-2 text-muted">(@Review.Rating / 5)</span>
+            </div>
+            <InputTextArea @bind-Value="Review.Comment" class="form-control" id="Review.Comment" rows="3" />
         </div>
+
         <button type="submit" class="btn btn-primary">Submit</button>
     </EditForm>
+
+    @if (isSubmitted)
+    {
+        <div class="alert alert-success mt-3" role="alert">
+            Your review has been submitted successfully!
+        </div>
+        <script>
+            setTimeout(function () {
+                window.location.reload();
+            }, 1000);
+        </script>
+    }
 </div>
 
 @code {
@@ -24,27 +47,37 @@
     [Parameter]
     public long GameId { get; set; }
 
+    private bool isSubmitted = false;
+
+    // Set default rating to 5 (or 0 if you prefer)
+    protected override void OnInitialized()
+    {
+        if (Review.Rating == 0) Review.Rating = 5;
+    }
+
+    private void SetRating(double rating)
+    {
+        Review.Rating = rating;
+    }
+
     public async Task SubmitReview()
     {
         await InsertReview();
-
         StateHasChanged();
     }
 
     private async Task InsertReview()
     {
-
         AuthenticationState? authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
         ClaimsPrincipal? user = authState.User;
 
         Review.GameId = GameId;
         Review.UserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         Review.Comment = Review.Comment?.Trim();
-        Review.Rating = 1.8;
         Review.CreatedAt = DateTime.Now;
-        Review.UpdatedAt = DateTime.Now;
 
 
         await _reviewDbService.AddReview(Review);
+        isSubmitted = true;
     }
 }

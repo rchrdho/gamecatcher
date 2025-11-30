@@ -30,6 +30,14 @@ builder
     })
     .AddIdentityCookies();
 
+builder
+    .Services.AddAuthentication()
+    .AddGoogle(googleOptions =>
+    {
+        googleOptions.ClientId = Environment.GetEnvironmentVariable("OAUTH_CLIENT_ID")!;
+        googleOptions.ClientSecret = Environment.GetEnvironmentVariable("OAUTH_CLIENT_SECRET")!;
+    });
+
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -47,6 +55,8 @@ builder
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IFriendService, FriendService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 
