@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using GameCatcher.Data;
+﻿using GameCatcher.Data;
 using GameCatcher.DatabaseService;
 using GameCatcher.Models;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace GameCatcher.Tests;
 
@@ -14,7 +10,7 @@ public class ReviewServiceTests
     private GameCatcherDbContext GetInMemoryDbContext()
     {
         var options = new DbContextOptionsBuilder<GameCatcherDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) // Unique DB per test
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         return new GameCatcherDbContext(options);
     }
