@@ -2,6 +2,8 @@
 @using GameCatcher.Models
 @using GameCatcher.Services
 @using IGDB
+@inject IGDBService IGDBService
+
 
 @if (isLoading)
 {
@@ -31,7 +33,6 @@ else
 
 }
 @code {
-    private IGDBService _igdbService = new IGDBService();
     private List<Game>? gamesList;
 
     private bool isLoading = true;
@@ -48,7 +49,7 @@ else
         isLoading = true;
         gamesList = new List<Game>();
 
-        List<IGDB.Models.PopularityPrimitive>? popularGames = await _igdbService.GetGamesByTypeAsync(limit, popularityType);
+        List<IGDB.Models.PopularityPrimitive>? popularGames = await IGDBService.GetGamesByTypeAsync(limit, popularityType);
         if (popularGames == null || !popularGames.Any())
         {
             isLoading = false;
@@ -58,7 +59,7 @@ else
 
         // batch ids and request artworks in same call to avoid per-id requests
         List<int>? ids = popularGames.Where(g => g?.GameId != null).Select(g => (int)g!.GameId!).Distinct().ToList();
-        List<IGDB.Models.Game>? games = await _igdbService.GetGamesByIdsAsync(ids);
+        List<IGDB.Models.Game>? games = await IGDBService.GetGamesByIdsAsync(ids);
 
         foreach (var gameDetails in games)
         {

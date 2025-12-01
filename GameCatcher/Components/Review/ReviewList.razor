@@ -45,8 +45,10 @@ else
 
     private string GetUserNameById(string userId)
     {
+        // still Check unique id from user
         var user = _userService.GetUserByIdAsync(userId).Result;
-
-        return user?.UserName ?? "Unknown User";
+        
+        // then get the DisplayName property of the user and display it.
+        return user?.DisplayName ?? "Unknown User";
     }
 }

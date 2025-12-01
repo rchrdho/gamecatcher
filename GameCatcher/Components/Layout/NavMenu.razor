@@ -21,7 +21,7 @@
             <AuthorizeView>
                 <Authorized>
                     <div class="d-flex align-items-center">
-                        <a class="btn text-white" href="Account/Manage">@context.User.Identity?.Name</a>
+                        <a class="btn text-white" href="Account/Manage">@(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)</a>
                         <form action="Account/Logout" method="post">
                             <AntiforgeryToken />
                             <input type="hidden" name="ReturnUrl" value="@currentUrl" />

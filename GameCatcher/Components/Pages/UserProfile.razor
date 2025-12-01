@@ -1,8 +1,9 @@
-﻿@page "/Friend/Profile/{FriendId}"
+@page "/Profile/{@User.DisplayName}"
 @using GameCatcher.Data
 @using GameCatcher.Models
 @using GameCatcher.DatabaseService
 @using GameCatcher.Services
+
 @inject GameCatcher.DatabaseService.IUserService UserService
 @inject GameCatcher.DatabaseService.IFriendService FriendService
 @inject GameCatcher.DatabaseService.IReviewService ReviewService
@@ -10,10 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject IGDBService IGDBService
 
-@rendermode InteractiveServer
-
-<PageTitle>Friend Profile</PageTitle>
-
+<PageTitle>{@User?.DisplayName}'s Profile</PageTitle>
 <div class="card mb-3 p-2">
     <div class="row g-0">
         <div class="col-md-2">
@@ -22,19 +20,19 @@
         </div>
         <div class="col-md-10 d-flex align-items-center">
             <div class="card-body">
-                <h5 class="card-title">@User?.UserName</h5>
+                <h5 class="card-title">@User?.DisplayName</h5>
             </div>
         </div>
     </div>
     <div class="text-end mt-2">
-        <button class="btn btn-danger" @onclick="RemoveFriend">Remove Friend</button>
+        <button class="btn btn-danger" @onclick="AddFriend">Add as Friend</button>
     </div>
 </div>
 <div>
-    <h5>@User?.UserName's Reviews</h5>
+    <h5>@User?.DisplayName's Reviews</h5>
     @if (friendReviews.Count == 0)
     {
-        <p>@User?.UserName has not submitted any reviews yet.</p>
+        <p>@User?.DisplayName has not submitted any reviews yet.</p>
     }
     else
     {
@@ -79,9 +77,10 @@
     }
 </div>
 
+
 @code {
     [Parameter]
-    public string? FriendId { get; set; }
+    public string? UserId { get; set; }
     public ApplicationUser? User { get; set; }
     private List<Review> friendReviews = new();
     private Game? Game { get; set; }
@@ -90,7 +89,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        User = await UserService.GetUserByIdAsync(FriendId!);
+        User = await UserService.GetUserByIdAsync(UserId!);
 
         if (User != null)
         {
@@ -118,16 +117,17 @@
         }
     }
 
-    private async Task RemoveFriend()
+    private async Task AddFriend()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userPrincipal = authState.User;
         var userId = userPrincipal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        if (userId != null && FriendId != null)
+        if (userId != null && UserId != null)
         {
-            await FriendService.RemoveFriend(userId, FriendId);
+            await FriendService.AddFriend(userId, UserId);
             NavigationManager.NavigateTo("/Account/Manage/Friends");
         }
     }
-}
+    
+    }

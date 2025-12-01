@@ -8,6 +8,7 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
+@inject IWebHostEnvironment WebHostEnvironment
 
 <PageTitle>Profile</PageTitle>
 
@@ -19,61 +20,145 @@
         <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
+            <div class="mb-3 text-center">
+            <label for="fileInput" class="cursor-pointer profile-image-container" style="cursor: pointer;">
+            <div class="mb-3 text-center">
+                <div class="d-inline-block position-relative profile-image-container">
+                    <label for="fileInput" class="cursor-pointer" style="cursor: pointer;">
+                        
+                        @* LOGIC UPDATE: Always show an image. Use the helper property below. *@
+                        <img src="@ImagePreviewUrl" alt="Profile" 
+                             class="rounded-circle img-thumbnail" 
+                             style="width: 150px; height: 150px; object-fit: cover;" />
+
+                        <div class="overlay rounded-circle d-flex align-items-center justify-content-center">
+                            <span class="text-white fw-bold">Avatar</span>
+                        </div>
+                    </label>
+                    <InputFile OnChange="HandleFileUpload" id="fileInput" class="d-none" accept=".jpg,.jpeg,.png" />
+                </div>
+                <ValidationMessage For="() => Input.ProfilePictureUrl" class="text-danger" />
+            </div>
+            </label>
+            </div>
             <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control"
+                <input type="text" value="@displayname" id="displayname" class="text-dark form-control"
                     placeholder="Choose your username." disabled />
-                <label for="username" class="form-label">Username</label>
+                <label for="username" class="form-label">Display Name</label>
             </div>
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control"
-                    placeholder="Enter your phone number" />
-                <label for="Input.PhoneNumber" class="form-label">Phone number</label>
-                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+                <InputText @bind-Value="Input.DisplayName" id="newdisplayname" class="form-control"
+                    placeholder="Display name." />
+                <label for="displayname-input" class="form-label">Change your name</label>
+                <ValidationMessage For="() => Input.DisplayName" class="text-danger"/>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">
+            Edit Profile
+            </button>
         </EditForm>
     </div>
 </div>
 
 @code {
     private ApplicationUser user = default!;
-    private string? username;
-    private string? phoneNumber;
+    private string? displayname;
+    private string? statusMessage;
+    private const string DefaultProfileImage = "/image/default_user_profile_pic.jpg";
 
+    // 5MB file limit
+    private long maxFileSize = 1024 * 1024 * 5;
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
+    private string ImagePreviewUrl => string.IsNullOrEmpty(Input.ProfilePictureUrl) 
+        ? DefaultProfileImage 
+        : Input.ProfilePictureUrl;
     protected override async Task OnInitializedAsync()
     {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        username = await UserManager.GetUserNameAsync(user);
-        phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext); 
+        displayname = user.DisplayName;
 
-        Input.PhoneNumber ??= phoneNumber;
+        if (string.IsNullOrEmpty(Input.DisplayName)) 
+        {
+            Input.DisplayName = user.DisplayName;
+        }
+        
+        if (string.IsNullOrEmpty(Input.ProfilePictureUrl))
+        {
+            Input.ProfilePictureUrl = user.ProfilePictureUrl;
+        }
     }
 
     private async Task OnValidSubmitAsync()
     {
-        if (Input.PhoneNumber != phoneNumber)
+        bool hasChanges = false;
+
+        if (Input.DisplayName != user.DisplayName)
         {
-            var setPhoneResult = await UserManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
-            if (!setPhoneResult.Succeeded)
-            {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
-            }
+            user.DisplayName = Input.DisplayName;
+            hasChanges = true;
         }
 
+        if (Input.ProfilePictureUrl != user.ProfilePictureUrl)
+        {
+            user.ProfilePictureUrl = Input.ProfilePictureUrl;
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        {
+            // Save changes.
+            await UserManager.UpdateAsync(user);
+        }
         await SignInManager.RefreshSignInAsync(user);
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
 
+    // This handles File upload for our profile pictures.
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        try
+        {
+            var fileExtension = Path.GetExtension(file.Name);
+            var trustedFileName = Guid.NewGuid().ToString() + fileExtension;
+
+            var folderPath = Path.Combine(WebHostEnvironment.WebRootPath, "image");
+            
+            if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+
+            var filePath = Path.Combine(folderPath, trustedFileName);
+
+            var resizeFile = await file.RequestImageFileAsync(file.ContentType, 300, 300);
+
+            await using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await resizeFile.OpenReadStream(maxFileSize).CopyToAsync(stream);
+            }
+
+            Input.ProfilePictureUrl = $"/image/{trustedFileName}";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error uploading image: {ex.Message}";
+        
+        }
+    }
+
     private sealed class InputModel
     {
-        [Phone]
-        [Display(Name = "Phone number")]
-        public string? PhoneNumber { get; set; }
+        [Url]
+        [Display(Name = "Profile Picture")]
+        public string? ProfilePictureUrl { get; set; }
+
+        [StringLength(maximumLength:15, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 3)]
+        [Display(Name = "Display Name")]
+        public string? DisplayName {get; set;}
+
     }
 }

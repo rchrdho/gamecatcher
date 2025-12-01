@@ -5,6 +5,8 @@
 @using IGDB
 @using Microsoft.AspNetCore.Authorization
 
+@inject IGDBService IGDBService
+
 @rendermode InteractiveServer
 
 <div class="card mb-3">
@@ -50,7 +52,6 @@
 
     private bool showReviewForm = false;
 
-    public IGDBService _igdbService = new IGDBService();
     private Game? gameDetails;
 
     protected override async Task OnInitializedAsync()
@@ -60,7 +61,7 @@
 
     private async Task FetchGameDetailsByIdAsync()
     {
-        IGDB.Models.Game? game = await _igdbService.GetGameBySingleIdAsync(GameId);
+        IGDB.Models.Game? game = await IGDBService.GetGameBySingleIdAsync(GameId);
 
         IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
 
