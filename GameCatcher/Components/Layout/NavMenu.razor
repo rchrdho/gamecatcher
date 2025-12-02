@@ -36,9 +36,13 @@
                                 </span>
                             }
                         </a>
-
-                        <a class="btn text-white" href="Account/Manage">@context.User.Identity?.Name</a>
-
+                        <a class="btn text-white" href="Account/Manage">
+                        <img src="@(context.User.FindFirst("ProfilePictureUrl")?.Value ?? "/image/default_user_profile_pic.jpg")"
+                        alt="profile picture" class="rounded-circle me-2"
+                        style="width: 30px; height: 30px; object-fit: cover;" />
+                        @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)
+                        </a>
+                        
                         <form action="Account/Logout" method="post">
                             <AntiforgeryToken />
                             <input type="hidden" name="ReturnUrl" value="@currentUrl" />

@@ -27,6 +27,11 @@
             <h2>Create a new account.</h2>
             <hr />
             <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.DisplayName" id="Input.DisplayName" class="form-control" autocomplete="username" aria-required="true" placeholder="Display Name" />
+                <label for="Input.DisplayName">Display Name</label>
+                <ValidationMessage For="() => Input.DisplayName" class="text-danger" />
+            </div>            
+            <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                 <label for="Input.Email">Email</label>
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
@@ -67,7 +72,7 @@
     public async Task RegisterUser(EditContext editContext)
     {
         var user = CreateUser();
-
+        user.DisplayName = Input.DisplayName;
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
@@ -125,6 +130,10 @@
 
     private sealed class InputModel
     {
+        [Required]
+        [Display(Name = "Display Name")]
+        public string DisplayName {get; set;} = "";
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]

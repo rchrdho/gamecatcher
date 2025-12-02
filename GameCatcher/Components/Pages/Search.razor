@@ -5,6 +5,7 @@
 @using IGDB
 
 @inject NavigationManager Navigation
+@inject IGDBService IGDBService
 
 @rendermode InteractiveServer
 
@@ -97,8 +98,6 @@
     private string currentSearchTerm = string.Empty;
     private List<Game>? searchResults;
     private bool isLoading = false;
-    private IGDBService _igdbService = new IGDBService();
-
     protected override async Task OnInitializedAsync()
     {
         // Initialize search term from query parameter or route parameter
@@ -158,7 +157,7 @@
 
         try
         {
-            List<IGDB.Models.Game>? igdbGames = await _igdbService.SearchGamesAsync(currentSearchTerm.Trim(), 24);
+            List<IGDB.Models.Game>? igdbGames = await IGDBService.SearchGamesAsync(currentSearchTerm.Trim(), 24);
             
             searchResults = igdbGames.Select(gameDetails =>
             {

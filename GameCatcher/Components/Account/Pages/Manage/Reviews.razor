@@ -7,6 +7,7 @@
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject GameCatcher.DatabaseService.IReviewService ReviewDbService
+@inject IGDBService IGDBService
 
 <h3>Your Reviews</h3>
 
@@ -60,9 +61,6 @@ else
 
 @code {
     private List<Review> userReviews = new();
-
-    private IGDBService _igdbService = new();
-
     private Game? Game { get; set; }
 
     private Dictionary<long, string> GameIdGameName = new Dictionary<long, string>();
@@ -86,7 +84,7 @@ else
     {
         foreach (var review in userReviews)
         {
-            IGDB.Models.Game? game = await _igdbService.GetGameBySingleIdAsync(review.GameId);
+            IGDB.Models.Game? game = await IGDBService.GetGameBySingleIdAsync(review.GameId);
             IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
 
             Game = new Game

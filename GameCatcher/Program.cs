@@ -3,6 +3,7 @@ using GameCatcher.Components;
 using GameCatcher.Components.Account;
 using GameCatcher.Data;
 using GameCatcher.DatabaseService;
+using GameCatcher.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,9 @@ builder.Services.AddScoped<
     AuthenticationStateProvider,
     IdentityRevalidatingAuthenticationStateProvider
 >();
+
+// Added memory caching. Implemented inside of IGDBService
+builder.Services.AddMemoryCache();
 
 builder
     .Services.AddAuthentication(options =>
@@ -53,12 +57,17 @@ builder
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
-
+builder.Services.AddScoped<IGDBService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IFriendService, FriendService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IFriendRequestService, FriendRequestService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+
+builder.Services.AddScoped<
+    IUserClaimsPrincipalFactory<ApplicationUser>,
+    CustomUserClaimsPrincipalFactory
+>();
 
 var app = builder.Build();
 

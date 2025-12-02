@@ -8,8 +8,10 @@
 @inject GameCatcher.DatabaseService.IFriendService FriendService
 @inject GameCatcher.DatabaseService.IFriendRequestService FriendRequestService
 @inject GameCatcher.DatabaseService.IReviewService ReviewService
+@inject GameCatcher.Services.IGDBService IGDBService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+
 @rendermode InteractiveServer
 
 <PageTitle>@(User?.UserName ?? "User") Profile</PageTitle>
@@ -93,7 +95,6 @@
 @code {
     [Parameter] public string? FriendId { get; set; }
     public ApplicationUser? User { get; set; }
-    private IGDBService _igdbService = new();
     private List<Review> friendReviews = new();
     private Dictionary<long, string> GameIdGameName = new();
     private Dictionary<long, string> GameIdGameArtwork = new();
@@ -144,7 +145,7 @@
         {
             if (!GameIdGameName.ContainsKey(review.GameId))
             {
-                var game = await _igdbService.GetGameBySingleIdAsync(review.GameId);
+                var game = await IGDBService.GetGameBySingleIdAsync(review.GameId);
                 var artwork = game?.Artworks?.Values?.FirstOrDefault();
                 var artworkUrl = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotMed);
 
