@@ -3,14 +3,16 @@
 @using GameCatcher.Models
 @using GameCatcher.DatabaseService
 @using GameCatcher.Services
+@using System.Security.Claims
 @inject GameCatcher.DatabaseService.IUserService UserService
 @inject GameCatcher.DatabaseService.IFriendService FriendService
+@inject GameCatcher.DatabaseService.IFriendRequestService FriendRequestService
 @inject GameCatcher.DatabaseService.IReviewService ReviewService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @rendermode InteractiveServer
 
-<PageTitle>Friend Profile</PageTitle>
+<PageTitle>@(User?.UserName ?? "User") Profile</PageTitle>
 
 <div class="card mb-3 p-2">
     <div class="row g-0">
@@ -21,13 +23,32 @@
         <div class="col-md-10 d-flex align-items-center">
             <div class="card-body">
                 <h5 class="card-title">@User?.UserName</h5>
+
+                @if (IsMe)
+                {
+                    <span class="badge bg-secondary">This is you</span>
+                }
+                else if (IsFriend)
+                {
+                    <button class="btn btn-danger btn-sm" @onclick="RemoveFriend">Remove Friend</button>
+                }
+                else if (RequestPending)
+                {
+                    <button class="btn btn-secondary btn-sm" disabled>Request Sent</button>
+                }
+                else if (HasIncomingRequest)
+                {
+                    <a href="/Account/Manage/FriendRequests" class="btn btn-primary btn-sm">Respond to Request</a>
+                }
+                else
+                {
+                    <button class="btn btn-primary btn-sm" @onclick="SendFriendRequest">Add Friend</button>
+                }
             </div>
         </div>
     </div>
-    <div class="text-end mt-2">
-        <button class="btn btn-danger" @onclick="RemoveFriend">Remove Friend</button>
-    </div>
 </div>
+
 <div>
     <h5>@User?.UserName's Reviews</h5>
     @if (friendReviews.Count == 0)
@@ -41,36 +62,28 @@
             <div class="card mt-3">
                 <div class="row g-0">
                     <div class="col-md-4 d-flex align-items-center" style="max-width: 250px;">
-                        @foreach (var gameIdGameArtwork in GameIdGameArtwork)
+                        @if (GameIdGameArtwork.TryGetValue(review.GameId, out var artworkUrl))
                         {
-                            @if (review.GameId == gameIdGameArtwork.Key)
-                            {
-                                <img src="@gameIdGameArtwork.Value" class="img-fluid rounded-start" alt="@gameIdGameArtwork.Value">
-                            }
+                            <img src="@artworkUrl" class="img-fluid rounded-start" alt="Game Artwork">
                         }
                     </div>
                     <div class="col-md-8">
                         <div class="card-body">
-                            @foreach (var gameIdGameName in GameIdGameName)
+                            @if (GameIdGameName.TryGetValue(review.GameId, out var gameName))
                             {
-                                @if (review.GameId == gameIdGameName.Key)
-                                {
-                                    <h5 class="card-title">@gameIdGameName.Value</h5>
-                                }
+                                <h5 class="card-title">@gameName</h5>
                             }
-                            <small class="text-body-secondary">Reviewed On:
-                                @review.CreatedAt.ToString(format: "MMMM dd, yyyy")</small>
+                            <small class="text-body-secondary">Reviewed On: @review.CreatedAt.ToString("MMMM dd, yyyy")</small>
                             <p class="card-text">
-                                <i class="bi @(review.Rating >= 1 ? "bi-star-fill" : "bi-star") text-warning"></i>
-                                <i class="bi @(review.Rating >= 2 ? "bi-star-fill" : "bi-star") text-warning"></i>
-                                <i class="bi @(review.Rating >= 3 ? "bi-star-fill" : "bi-star") text-warning"></i>
-                                <i class="bi @(review.Rating >= 4 ? "bi-star-fill" : "bi-star") text-warning"></i>
-                                <i class="bi @(review.Rating >= 5 ? "bi-star-fill" : "bi-star") text-warning"></i>
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi @(review.Rating >= i ? "bi-star-fill" : "bi-star") text-warning"></i>
+                                }
                             </p>
-                            <p class=" card-text">@review.Comment</p>
+                            <p class="card-text">@review.Comment</p>
                         </div>
                     </div>
-                    <a href="/game/info/@review.GameId" class="stretched-link" />
+                    <a href="/game/info/@review.GameId" class="stretched-link"></a>
                 </div>
             </div>
         }
@@ -78,55 +91,84 @@
 </div>
 
 @code {
-    [Parameter]
-    public string? FriendId { get; set; }
+    [Parameter] public string? FriendId { get; set; }
     public ApplicationUser? User { get; set; }
     private IGDBService _igdbService = new();
     private List<Review> friendReviews = new();
-    private Game? Game { get; set; }
-    private Dictionary<long, string> GameIdGameName = new Dictionary<long, string>();
-    private Dictionary<long, string> GameIdGameArtwork = new Dictionary<long, string>();
+    private Dictionary<long, string> GameIdGameName = new();
+    private Dictionary<long, string> GameIdGameArtwork = new();
+
+    private string? CurrentUserId;
+    private bool IsMe => CurrentUserId == FriendId;
+    private bool IsFriend;
+    private bool RequestPending;
+    private bool HasIncomingRequest;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
         User = await UserService.GetUserByIdAsync(FriendId!);
 
         if (User != null)
         {
             friendReviews = await ReviewService.GetReviewsByUserId(User.Id);
-        }
+            await FetchGameMetadata();
 
-        await FetchGameName();
+            if (!string.IsNullOrEmpty(CurrentUserId) && !IsMe)
+            {
+                var friendsWith = await FriendService.GetFriendsByUserId(CurrentUserId);
+                var friendsOf = await FriendService.GetFriendsOfUserByUserId(CurrentUserId);
+                var friends = friendsWith.Concat(friendsOf).ToList();
+                
+                IsFriend = friends.Any(f => f.Id == FriendId);
+
+                if (!IsFriend)
+                {
+                    // check if I sent a request to them
+                    var myPendingRequests = await FriendRequestService.GetPendingRequestsAsync(FriendId!); // Requests waiting on THEM
+                    RequestPending = myPendingRequests.Any(r => r.SenderId == CurrentUserId);
+
+                    // check if they sent a request to me
+                    var incomingRequests = await FriendRequestService.GetPendingRequestsAsync(CurrentUserId);
+                    HasIncomingRequest = incomingRequests.Any(r => r.SenderId == FriendId);
+                }
+            }
+        }
     }
 
-    private async Task FetchGameName()
+    private async Task FetchGameMetadata()
     {
         foreach (var review in friendReviews)
         {
-            IGDB.Models.Game? game = await _igdbService.GetGameBySingleIdAsync(review.GameId);
-            IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
-
-            Game = new Game
+            if (!GameIdGameName.ContainsKey(review.GameId))
             {
-                Name = game?.Name,
-                ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotMed)
-            };
+                var game = await _igdbService.GetGameBySingleIdAsync(review.GameId);
+                var artwork = game?.Artworks?.Values?.FirstOrDefault();
+                var artworkUrl = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotMed);
 
-            GameIdGameName.Add(review.GameId, Game!.Name!);
-            GameIdGameArtwork.Add(review.GameId, Game!.ArtworkImageId);
+                if (game?.Name != null) GameIdGameName[review.GameId] = game.Name;
+                if (artworkUrl != null) GameIdGameArtwork[review.GameId] = artworkUrl;
+            }
+        }
+    }
+
+    private async Task SendFriendRequest()
+    {
+        if (CurrentUserId != null && FriendId != null)
+        {
+            await FriendRequestService.SendRequestAsync(CurrentUserId, FriendId);
+            RequestPending = true;
         }
     }
 
     private async Task RemoveFriend()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var userPrincipal = authState.User;
-        var userId = userPrincipal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-        if (userId != null && FriendId != null)
+        if (CurrentUserId != null && FriendId != null)
         {
-            await FriendService.RemoveFriend(userId, FriendId);
-            NavigationManager.NavigateTo("/Account/Manage/Friends");
+            await FriendService.RemoveFriend(CurrentUserId, FriendId);
+            IsFriend = false;
         }
     }
 }

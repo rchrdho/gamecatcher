@@ -6,6 +6,7 @@
 @inject NavigationManager NavigationManager
 @inject UserManager<ApplicationUser> UserManager
 @inject GameCatcher.DatabaseService.IFriendService FriendService
+@inject GameCatcher.DatabaseService.IFriendRequestService FriendRequestService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Friends</PageTitle>
@@ -18,6 +19,13 @@
             @bind-Value="Friend.FriendId" />
         <button type="submit" class="btn btn-primary ms-2">Add Friend</button>
     </EditForm>
+
+    @if (requestSent)
+    {
+        <div class="alert alert-success mt-3" role="alert">
+            Friend request sent successfully!
+        </div>
+    }
 </div>
 
 @if (friends.Count == 0)
@@ -54,14 +62,18 @@ else
 }
 
 @code {
-    private ApplicationUser user = default!;
-    private List<ApplicationUser> friends = new();
-
     [SupplyParameterFromForm]
     private FriendInputModel Friend { get; set; } = new();
 
+    private List<ApplicationUser> friends = new();
+
+    private List<ApplicationUser> friendsWith = new();
+
+    private List<ApplicationUser> friendsOf = new();
+
     public string UserId { get; set; } = "";
 
+    public bool requestSent = false;
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -72,13 +84,19 @@ else
 
         if (!string.IsNullOrEmpty(UserId))
         {
-            friends = await FriendService.GetFriendsByUserId(UserId);
+            friendsWith = await FriendService.GetFriendsByUserId(UserId);
+            friendsOf = await FriendService.GetFriendsOfUserByUserId(UserId);
+
+            friends = friendsWith.Concat(friendsOf).ToList();
         }
     }
 
+    // send a friend request
     private async Task HandleAddFriend()
     {
-        await FriendService.AddFriend(UserId, Friend.FriendId);
+        @* await FriendService.AddFriend(UserId, Friend.FriendId); *@
+        await FriendRequestService.SendRequestAsync(UserId, Friend.FriendId);
+        requestSent = true;
     }
 
     public class FriendInputModel
