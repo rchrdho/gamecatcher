@@ -52,7 +52,7 @@
     // Set default rating to 5 (or 0 if you prefer)
     protected override void OnInitialized()
     {
-        if (Review.Rating == 0) Review.Rating = 5;
+        if (Review.Rating == null || Review.Rating == 0) Review.Rating = 0;
     }
 
     private void SetRating(double rating)
