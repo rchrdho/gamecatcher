@@ -91,3 +91,29 @@ h2 {
     background-color: #27333c;
     color: #ffffff;
 }
+
+.overflow-auto {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(58, 73, 84, 0.6) transparent;
+}
+
+/* Webkit browsers (Chrome, Edge, Safari) */
+.overflow-auto::-webkit-scrollbar {
+    height: 8px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 0 1rem;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+    background-color: rgba(58, 73, 84, 0.4);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(74, 89, 100, 0.7);
+}
