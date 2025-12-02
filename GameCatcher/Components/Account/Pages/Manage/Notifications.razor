@@ -1,0 +1,65 @@
+﻿@page "/Account/Manage/Notifications"
+@using GameCatcher.Models
+@using GameCatcher.DatabaseService
+@using System.Security.Claims
+@inject INotificationService NotificationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<h3>Notifications</h3>
+
+@if (UserNotifications == null)
+{
+    <p>Loading...</p>
+}
+else if (!UserNotifications.Any())
+{
+    <p>You have no notifications.</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var note in UserNotifications)
+        {
+            <button type="button" class="list-group-item list-group-item-action @(note.IsRead ? "" : "active") mb-2"
+                @onclick="() => MarkAsRead(note)" aria-current="@(!note.IsRead)">
+                <button type="button" class="btn-close" aria-label="Close" @onclick="() => RemoveNotification(note)"></button>
+                <div class="d-flex w-100 justify-content-between">
+                    <p class="mb-1">@note.Message</p>
+                    <small>@note.CreatedAt.ToShortDateString()</small>
+                </div>
+            </button>
+        }
+    </div>
+}
+
+@code {
+    private List<Notification>? UserNotifications;
+    private string? UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        UserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
+
+        if (UserId != null)
+        {
+            UserNotifications = await NotificationService.GetUserNotificationsAsync(UserId);
+        }
+    }
+
+    private async Task MarkAsRead(Notification note)
+    {
+        if (!note.IsRead)
+        {
+            await NotificationService.MarkAsReadAsync(note.NotificationId);
+            note.IsRead = true;
+        }
+    }
+
+    private async Task RemoveNotification(Notification note)
+    {
+        await NotificationService.RemoveNotificationAsync(note.NotificationId);
+        UserNotifications?.Remove(note);
+    }   
+}

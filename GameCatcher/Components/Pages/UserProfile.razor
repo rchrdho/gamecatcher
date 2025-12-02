@@ -1,0 +1,175 @@
+@page "/Profile/{UserId}"
+@using GameCatcher.Data
+@using GameCatcher.Models
+@using GameCatcher.DatabaseService
+@using GameCatcher.Services
+@using System.Security.Claims
+@inject GameCatcher.DatabaseService.IUserService UserService
+@inject GameCatcher.DatabaseService.IFriendService FriendService
+@inject GameCatcher.DatabaseService.IFriendRequestService FriendRequestService
+@inject GameCatcher.DatabaseService.IReviewService ReviewService
+@inject GameCatcher.Services.IGDBService IGDBService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+<PageTitle>@(User?.UserName ?? "User") Profile</PageTitle>
+
+<div class="card mb-3 p-2">
+    <div class="row g-0">
+        <div class="col-md-2">
+            <img src="image/default_user_profile_pic.jpg" class="img-thumbnail rounded-start" alt="..."
+                style="width: 150px">
+        </div>
+        <div class="col-md-10 d-flex align-items-center">
+            <div class="card-body">
+                <h5 class="card-title">@User?.UserName</h5>
+
+                @if (IsMe)
+                {
+                    <span class="badge bg-secondary">This is you</span>
+                }
+                else if (IsFriend)
+                {
+                    <button class="btn btn-danger btn-sm" @onclick="RemoveFriend">Remove Friend</button>
+                }
+                else if (RequestPending)
+                {
+                    <button class="btn btn-secondary btn-sm" disabled>Request Sent</button>
+                }
+                else if (HasIncomingRequest)
+                {
+                    <a href="/Account/Manage/FriendRequests" class="btn btn-primary btn-sm">Respond to Request</a>
+                }
+                else
+                {
+                    <button class="btn btn-primary btn-sm" @onclick="SendFriendRequest">Add Friend</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div>
+    <h5>@User?.UserName's Reviews</h5>
+    @if (friendReviews.Count == 0)
+    {
+        <p>@User?.UserName has not submitted any reviews yet.</p>
+    }
+    else
+    {
+        @foreach (var review in friendReviews)
+        {
+            <div class="card mt-3">
+                <div class="row g-0">
+                    <div class="col-md-4 d-flex align-items-center" style="max-width: 250px;">
+                        @if (GameIdGameArtwork.TryGetValue(review.GameId, out var artworkUrl))
+                        {
+                            <img src="@artworkUrl" class="img-fluid rounded-start" alt="Game Artwork">
+                        }
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            @if (GameIdGameName.TryGetValue(review.GameId, out var gameName))
+                            {
+                                <h5 class="card-title">@gameName</h5>
+                            }
+                            <small class="text-body-secondary">Reviewed On: @review.CreatedAt.ToString("MMMM dd, yyyy")</small>
+                            <p class="card-text">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="bi @(review.Rating >= i ? "bi-star-fill" : "bi-star") text-warning"></i>
+                                }
+                            </p>
+                            <p class="card-text">@review.Comment</p>
+                        </div>
+                    </div>
+                    <a href="/game/info/@review.GameId" class="stretched-link"></a>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string? UserId { get; set; }
+    public ApplicationUser? User { get; set; }
+    private List<Review> friendReviews = new();
+    private Dictionary<long, string> GameIdGameName = new();
+    private Dictionary<long, string> GameIdGameArtwork = new();
+
+    private string? CurrentUserId;
+    private bool IsMe => CurrentUserId == UserId;
+    private bool IsFriend;
+    private bool RequestPending;
+    private bool HasIncomingRequest;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        User = await UserService.GetUserByIdAsync(UserId!);
+
+        if (User != null)
+        {
+            friendReviews = await ReviewService.GetReviewsByUserId(User.Id);
+            await FetchGameMetadata();
+
+            if (!string.IsNullOrEmpty(CurrentUserId) && !IsMe)
+            {
+                var friendsWith = await FriendService.GetFriendsByUserId(CurrentUserId);
+                var friendsOf = await FriendService.GetFriendsOfUserByUserId(CurrentUserId);
+                var friends = friendsWith.Concat(friendsOf).ToList();
+
+                IsFriend = friends.Any(f => f.Id == UserId);
+
+                if (!IsFriend)
+                {
+                    // check if I sent a request to them
+                    var myPendingRequests = await FriendRequestService.GetPendingRequestsAsync(UserId!); // Requests waiting on THEM
+                    RequestPending = myPendingRequests.Any(r => r.SenderId == CurrentUserId);
+
+                    // check if they sent a request to me
+                    var incomingRequests = await FriendRequestService.GetPendingRequestsAsync(CurrentUserId);
+                    HasIncomingRequest = incomingRequests.Any(r => r.SenderId == UserId);
+                }
+            }
+        }
+    }
+
+    private async Task FetchGameMetadata()
+    {
+        foreach (var review in friendReviews)
+        {
+            if (!GameIdGameName.ContainsKey(review.GameId))
+            {
+                var game = await IGDBService.GetGameBySingleIdAsync(review.GameId);
+                var artwork = game?.Artworks?.Values?.FirstOrDefault();
+                var artworkUrl = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotMed);
+
+                if (game?.Name != null) GameIdGameName[review.GameId] = game.Name;
+                if (artworkUrl != null) GameIdGameArtwork[review.GameId] = artworkUrl;
+            }
+        }
+    }
+
+    private async Task SendFriendRequest()
+    {
+        if (CurrentUserId != null && UserId != null)
+        {
+            await FriendRequestService.SendRequestAsync(CurrentUserId, UserId);
+            RequestPending = true;
+        }
+    }
+
+    private async Task RemoveFriend()
+    {
+        if (CurrentUserId != null && UserId != null)
+        {
+            await FriendService.RemoveFriend(CurrentUserId, UserId);
+            IsFriend = false;
+        }
+    }
+}

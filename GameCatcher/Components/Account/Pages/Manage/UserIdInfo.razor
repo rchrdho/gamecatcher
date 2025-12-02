@@ -1,0 +1,19 @@
+﻿@page "/Account/Manage/UserIdInfo"
+@using GameCatcher.DatabaseService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>UserIdInfo</h3>
+
+<p>Your User ID is: <strong>@UserId</strong></p>
+<p>This ID can be used by your friends to add you on GameCatcher.</p>
+
+@code {
+    private string? UserId;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        UserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    }
+}
