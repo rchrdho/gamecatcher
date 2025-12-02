@@ -34,7 +34,7 @@ public class IGDBService
     {
         var popularityPrimitives = await _igdbClient.QueryAsync<IGDB.Models.PopularityPrimitive>(
             IGDBPopularityPrimitivesEndpoint,
-            query: $"fields {PopularityPrimitiveQueryFields}; limit {limit}; where popularity_type = {popularityType};"
+            query: $"fields {PopularityPrimitiveQueryFields}; sort value desc; limit {limit}; where popularity_type = {popularityType};"
         );
         return popularityPrimitives.ToList();
     }
