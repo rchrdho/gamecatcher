@@ -1,6 +1,9 @@
 ﻿@page "/Account/Manage"
 
+@rendermode InteractiveServer
+
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using GameCatcher.Data
 @using System.IO
@@ -10,15 +13,16 @@
 @inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 @inject IWebHostEnvironment WebHostEnvironment
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Profile</PageTitle>
 
-<h3>Profile</h3>
+<h3></h3>
 <StatusMessage />
 
 <div class="row">
     <div class="col-xl-6">
-        <EditForm Model="Input" FormName="profile" OnValidSubmit="HandleSubmit">
+        <EditForm Model="Input" OnValidSubmit="HandleSubmitAsync">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="mb-3 text-center">
@@ -27,13 +31,12 @@
                 <div class="d-inline-block position-relative profile-image-container">
                     <label for="fileInput" class="cursor-pointer" style="cursor: pointer;">
                         
-                        @* LOGIC UPDATE: Always show an image. Use the helper property below. *@
                         <img src="@ImagePreviewUrl" alt="Profile" 
                              class="rounded-circle img-thumbnail" 
                              style="width: 150px; height: 150px; object-fit: cover;" />
 
                         <div class="overlay rounded-circle d-flex align-items-center justify-content-center">
-                            <span class="text-white fw-bold">Avatar</span>
+                            <span class="text-primary fw-bold">Change Profile Picture</span>
                         </div>
                     </label>
                     <InputFile OnChange="HandleFileUpload" id="fileInput" class="d-none" accept=".jpg,.jpeg,.png" />
@@ -54,7 +57,7 @@
                 <ValidationMessage For="() => Input.DisplayName" class="text-danger"/>
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">
-            Update Profile
+            Update
             </button>
         </EditForm>
     </div>
@@ -71,22 +74,33 @@
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
-
-    private string ImagePreviewUrl => string.IsNullOrEmpty(Input.ProfilePictureUrl) 
-        ? DefaultProfileImage 
-        : Input.ProfilePictureUrl;
-    
+    private string ImagePreviewUrl 
+    {
+        get 
+        {
+            if (!string.IsNullOrEmpty(Input.ProfilePictureUrl)) return Input.ProfilePictureUrl;
+            if (user != null && !string.IsNullOrEmpty(user.ProfilePictureUrl)) return user.ProfilePictureUrl;
+            return DefaultProfileImage;
+        }
+    }
     protected override async Task OnInitializedAsync()
     {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext); 
-        displayname = user.DisplayName;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userPrincipal = authState.User;
 
-        if (string.IsNullOrEmpty(Input.DisplayName)) 
+        if (userPrincipal.Identity?.IsAuthenticated == true)
         {
-            Input.DisplayName = user.DisplayName;
+            user = await UserManager.GetUserAsync(userPrincipal) ?? throw new InvalidOperationException("Unable to load user.");
+
+            if (user != null)
+            {
+                Input.DisplayName = user.DisplayName;
+                Input.ProfilePictureUrl = user.ProfilePictureUrl;
+                displayname = user.DisplayName;
+            }
         }
+
         
     }
 
@@ -115,6 +129,7 @@
             }
 
             Input.ProfilePictureUrl = $"/image/{trustedFileName}";
+            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -123,44 +138,53 @@
         }
     }
 
-    private async Task HandleSubmit(EditContext context)
+    private async Task HandleSubmitAsync(EditContext context)
     {
-        if (!context.Validate())
+        if (user == null)
         {
-            Console.WriteLine("VALIDATION FAILED. Errors:");
-            foreach (var err in context.GetValidationMessages())
-            {
-                Console.WriteLine($"- {err}");
-            }
-             // Stop if invalid
+            return;
+        }
+
+        var currentUser = await UserManager.FindByIdAsync(user.Id);
+        if (currentUser == null)
+        {
+            statusMessage = "Error: User not found.";
             return;
         }
 
         bool hasChanges = false;
 
-        if (Input.DisplayName != user.DisplayName)
+        if (Input.DisplayName != currentUser.DisplayName)
         {
-            user.DisplayName = Input.DisplayName;
+            currentUser.DisplayName = Input.DisplayName;
             hasChanges = true;
         }
 
-        if (!string.IsNullOrEmpty(Input.ProfilePictureUrl) && Input.ProfilePictureUrl != user.ProfilePictureUrl)
+        if (!string.IsNullOrEmpty(Input.ProfilePictureUrl) && Input.ProfilePictureUrl != currentUser.ProfilePictureUrl)
         {
-            user.ProfilePictureUrl = Input.ProfilePictureUrl;
+            currentUser.ProfilePictureUrl = Input.ProfilePictureUrl;
             hasChanges = true;
         }
         
         if (hasChanges)
         {
-            await UserManager.UpdateAsync(user);
+            var updateResult = await UserManager.UpdateAsync(currentUser);
+
+            if (!updateResult.Succeeded)
+            {
+                statusMessage = "Error updating profile.";
+                StateHasChanged();
+                return;
+            }
         }
 
-        await SignInManager.RefreshSignInAsync(user);
+        await SignInManager.RefreshSignInAsync(currentUser);
+        user = currentUser;
+        statusMessage = "Your profile has been updated";
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
     private sealed class InputModel
     {
-        [Url]
         [Display(Name = "Profile Picture")]
         public string? ProfilePictureUrl { get; set; }
 
