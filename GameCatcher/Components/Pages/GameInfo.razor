@@ -1,0 +1,94 @@
+﻿@page "/game/info/{GameId:long}"
+@using GameCatcher.Components.Review
+@using GameCatcher.Models
+@using GameCatcher.Services
+@using IGDB
+@using Microsoft.AspNetCore.Authorization
+
+@inject IGDBService IGDBService
+
+@rendermode InteractiveServer
+
+<div class="card mb-3">
+    <div class="row g-0">
+        <div class="col-md-4">
+            <img src="@gameDetails?.ArtworkImageId" class="img-fluid rounded-start" alt="@gameDetails?.Name artwork">
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <h5 class="card-title">@gameDetails?.Name</h5>
+                <p class="card-text">@gameDetails?.Summary</p>
+                <div id="game-details">
+                    <p class="card-text"><small class="text-muted">Release Date:
+                            @gameDetails?.ReleaseDate?.ToString("MMMM dd, yyyy")</small></p>
+                    <p class="card-text"><small class="text-muted">Rating: @gameDetails?.Rating?.ToString("F2")</small></p>
+                    <p class="card-text"><small class="text-muted">Genre: @gameDetails?.Genre</small></p>
+                </div>
+                <AuthorizeView>
+                    <Authorized>
+                        <button @onclick="ShowReviewForm" class="btn btn-primary">
+                            Add Review
+                        </button>
+                    </Authorized>
+                    <NotAuthorized>
+                        <p>Please login or register an account to add a review.</p>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showReviewForm)
+{
+    <ReviewForm GameId="@GameId" />
+}
+
+<ReviewList GameId="@GameId" />
+
+@code {
+    [Parameter]
+    public long GameId { get; set; }
+
+    private bool showReviewForm = false;
+
+    private Game? gameDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchGameDetailsByIdAsync();
+    }
+
+    private async Task FetchGameDetailsByIdAsync()
+    {
+        IGDB.Models.Game? game = await IGDBService.GetGameBySingleIdAsync(GameId);
+
+        IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
+
+        string allGenres = "N/A";
+        if(game?.Genres?.Values?.Any() == true)
+        {
+            List<string> genreNames = game.Genres.Values
+                .Where(g => !string.IsNullOrEmpty(g.Name))
+                .Select(g => g.Name)
+                .ToList();
+            allGenres = string.Join(", ", genreNames);
+        }
+
+        gameDetails = new Game
+        {
+            GameId = game?.Id,
+            Name = game?.Name,
+            Summary = game?.Summary,
+            ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotHuge),
+            ReleaseDate = game?.FirstReleaseDate,
+            Rating = game?.TotalRating,
+            Genre = allGenres
+        };
+    }
+
+    private void ShowReviewForm()
+    {
+        showReviewForm = true;
+    }
+}

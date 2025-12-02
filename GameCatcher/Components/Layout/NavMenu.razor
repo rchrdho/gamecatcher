@@ -1,0 +1,115 @@
+﻿@using GameCatcher.DatabaseService
+@implements IDisposable
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@inject NavigationManager NavigationManager
+@inject INotificationService NotificationService
+
+@rendermode InteractiveServer
+
+<div onclick="document.querySelector('.navbar-toggle').click()">
+    <nav class="navbar navbar-expand-lg mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand text-white" href="/">GameCatcher</a>
+            <div class="mx-auto">
+                <div class="d-flex" role="search" @onclick:stopPropagation="true">
+                    <input @bind="searchTerm" @bind:event="oninput" @onkeypress="HandleSearchKeyPress"
+                        class="form-control me-2 search-bar" type="search" placeholder="Search for games..."
+                        aria-label="Search" />
+                    <button @onclick="HandleSearch" class="btn btn-outline-light" type="button">
+                        Search
+                    </button>
+                </div>
+            </div>
+            <AuthorizeView>
+                <Authorized>
+                    <div class="d-flex align-items-center">
+                        <a href="Account/Manage/Notifications" class="btn text-white position-relative me-3">
+                            <i class="bi bi-bell-fill"></i>
+                            @if (UnreadCount > 0)
+                            {
+                                <span
+                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    @UnreadCount
+                                    <span class="visually-hidden">unread messages</span>
+                                </span>
+                            }
+                        </a>
+                        <a class="btn text-white" href="Account/Manage">
+                        <img src="@(context.User.FindFirst("ProfilePictureUrl")?.Value ?? "/image/default_user_profile_pic.jpg")"
+                        alt="profile picture" class="rounded-circle me-2"
+                        style="width: 30px; height: 30px; object-fit: cover;" />
+                        @(context.User.FindFirst("DisplayName")?.Value ?? context.User.Identity?.Name)
+                        </a>
+                        
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <button type="submit" class="btn btn-danger ms-2">Logout</button>
+                        </form>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="d-flex">
+                        <a class="btn btn-primary" href="Account/Register" role="button">Register</a>
+                        <a class="btn btn-success ms-2" href="Account/Login" role="button">Login</a>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private string? currentUrl;
+    private string searchTerm = string.Empty;
+    private int UnreadCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userId is not null)
+            {
+                var notifs = await NotificationService.GetUserNotificationsAsync(userId);
+                UnreadCount = notifs.Count(n => !n.IsRead);
+            }
+        }
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    private void HandleSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            HandleSearch();
+        }
+    }
+
+    private void HandleSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var url = $"/search?q={Uri.EscapeDataString(searchTerm.Trim())}";
+            NavigationManager.NavigateTo(url);
+            searchTerm = string.Empty; // Clear search after navigation
+        }
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

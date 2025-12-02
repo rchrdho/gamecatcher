@@ -1,0 +1,81 @@
+﻿@using System.Text
+@using GameCatcher.Models
+@using GameCatcher.Services
+@using IGDB
+@inject IGDBService IGDBService
+
+@if (isLoading)
+{
+    <div>Loading games...</div>
+}
+else if (gamesList is null || !gamesList.Any())
+{
+    <div>No games found.</div>
+}
+else 
+{
+    <div class="container mb-4">
+        <h2>IGDB Playing</h2>
+        <div class="d-flex flex-row flex-nowrap gap-3 overflow-auto py-2">
+            @foreach (var g in gamesList)
+            {
+                <div class="card flex-shrink-0" style="width: 18rem;">
+                    <img src="@g?.ArtworkImageId" class="card-img-top" alt="Artwork image">
+                    <div class="card-body">
+                        <h5 class="card-title">@g?.Name</h5>
+                    </div>
+                    <a href="/game/info/@g?.GameId" class="stretched-link" />
+                </div>
+            }
+        </div>
+    </div>
+
+}
+@code {
+    private List<Game>? gamesList;
+
+    private bool isLoading = true;
+    private int limit = 30; 
+    private int popularityType = 3;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchPopularGamesAsync();
+    }
+    
+    private async Task FetchPopularGamesAsync()
+    {
+        isLoading = true;
+        gamesList = new List<Game>();
+
+        List<IGDB.Models.PopularityPrimitive>? popularGames = await IGDBService.GetGamesByTypeAsync(limit, popularityType);
+        if (popularGames == null || !popularGames.Any())
+        {
+            isLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        // batch ids and request artworks in same call to avoid per-id requests
+        List<int>? ids = popularGames.Where(g => g?.GameId != null).Select(g => (int)g!.GameId!).Distinct().ToList();
+        List<IGDB.Models.Game>? games = await IGDBService.GetGamesByIdsAsync(ids);
+
+        foreach (var gameDetails in games)
+        {
+            IGDB.Models.Artwork? artwork = gameDetails?.Artworks?.Values?.FirstOrDefault(a => !string.IsNullOrEmpty(a?.ImageId));
+            if (artwork == null)
+                continue;
+
+            gamesList.Add(new Game
+            {
+                GameId = gameDetails?.Id,
+                Name = gameDetails?.Name,
+                Summary = gameDetails?.Summary,
+                ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotBig)
+            });
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+}
