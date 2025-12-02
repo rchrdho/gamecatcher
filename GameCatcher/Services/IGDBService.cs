@@ -10,7 +10,7 @@ public class IGDBService
 
     // Query Fields
     public string GameQueryFields { get; set; } =
-        "id, name, summary, artworks.image_id, genres, first_release_date, total_rating";
+        "id, name, summary, artworks.image_id, genres.name, first_release_date, total_rating";
     public string PopularityPrimitiveQueryFields { get; set; } =
         "id, game_id, popularity_type, value";
 
