@@ -40,7 +40,7 @@ public class IGDBService
         {
             var result = await _igdbClient.QueryAsync<IGDB.Models.PopularityPrimitive>(
                 IGDBPopularityPrimitivesEndpoint,
-                query: $"fields {PopularityPrimitiveQueryFields}; limit {limit}; where popularity_type = {popularityType};"
+                query: $"fields {PopularityPrimitiveQueryFields}; sort value desc; limit {limit}; where popularity_type = {popularityType};"
             );
             cachedGames = result.ToList();
             var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
