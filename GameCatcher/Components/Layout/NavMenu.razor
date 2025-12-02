@@ -11,7 +11,7 @@
             <div class="mx-auto">
                 <div class="d-flex" role="search" @onclick:stopPropagation="true">
                     <input @bind="searchTerm" @bind:event="oninput" @onkeypress="HandleSearchKeyPress"
-                           class="form-control me-2 search-bar" type="search" placeholder="Search"
+                           class="form-control me-2 search-bar" type="search" placeholder="Search for games..."
                            aria-label="Search" />
                     <button @onclick="HandleSearch" class="btn btn-outline-light" type="button">
                         Search
