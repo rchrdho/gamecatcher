@@ -1,4 +1,5 @@
-﻿@using GameCatcher.DatabaseService
+﻿@using GameCatcher.Data
+@using GameCatcher.DatabaseService
 @using GameCatcher.Models
 
 @inject GameCatcher.DatabaseService.IReviewService _reviewDbService
@@ -12,9 +13,18 @@ else
 {
     @foreach (var review in reviews)
     {
+        var user = GetUserById(review.UserId!);
         <div class="card mt-3">
-            <div class="card-header"> Reviewed by: @GetUserNameById(review.UserId!)
+            <div class="card-header" style="cursor: pointer;" @onclick="() => NavigateToUserProfile(review.UserId!)"> Reviewed
+                by:
+                <br><br />
+                <div class="d-flex align-items-center">
+                    <img src="@(string.IsNullOrEmpty(user?.ProfilePictureUrl) ? "/image/default_user_profile_pic.jpg" : user.ProfilePictureUrl)"
+                        alt="@user?.DisplayName" class="rounded-circle me-2"
+                        style="width: 40px; height: 40px; object-fit: cover;" />
+                    <strong>@user?.DisplayName</strong>
                 <span class="text-muted"> - @review.CreatedAt.ToString(format: "MMMM dd, yyyy")</span>
+                </div>
                 <span class="float-end">
                     <i class="bi @(review.Rating >= 1 ? "bi-star-fill" : "bi-star") text-warning"></i>
                     <i class="bi @(review.Rating >= 2 ? "bi-star-fill" : "bi-star") text-warning"></i>
@@ -32,11 +42,18 @@ else
 
 
 @code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
     [Parameter]
     public long GameId { get; set; }
 
     private List<Review> reviews = new();
 
+    private ApplicationUser? GetUserById(string userId)
+    {
+        return _userService.GetUserByIdAsync(userId).Result;
+    }
     protected override async Task OnInitializedAsync()
     {
 
@@ -47,8 +64,13 @@ else
     {
         // still Check unique id from user
         var user = _userService.GetUserByIdAsync(userId).Result;
-        
+
         // then get the DisplayName property of the user and display it.
         return user?.DisplayName ?? "Unknown User";
+    }
+
+    private void NavigateToUserProfile(string userId)
+    {
+        NavigationManager.NavigateTo($"/Profile/{userId}");
     }
 }

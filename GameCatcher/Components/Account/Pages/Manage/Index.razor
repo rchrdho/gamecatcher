@@ -14,7 +14,7 @@
 @inject IdentityRedirectManager RedirectManager
 @inject IWebHostEnvironment WebHostEnvironment
 @inject AuthenticationStateProvider AuthenticationStateProvider
-
+@inject NavigationManager NavigationManager
 <PageTitle>Profile</PageTitle>
 
 <h3></h3>
@@ -181,7 +181,7 @@
         await SignInManager.RefreshSignInAsync(currentUser);
         user = currentUser;
         statusMessage = "Your profile has been updated";
-        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+        NavigationManager.NavigateTo("Account/Manage", forceLoad: true);
     }
     private sealed class InputModel
     {
