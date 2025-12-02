@@ -24,6 +24,16 @@
     font-size: 1.1rem;
 }
 
+.search-bar {
+    background-color: #2c3e50;
+    border-color: #34495e;
+    color: #ffffff; 
+}
+
+.search-bar::placeholder {
+    color: #bdc3c7;
+}
+
 .bi {
     display: inline-block;
     position: relative;

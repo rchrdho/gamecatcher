@@ -65,6 +65,16 @@
 
         IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
 
+        string allGenres = "N/A";
+        if(game?.Genres?.Values?.Any() == true)
+        {
+            List<string> genreNames = game.Genres.Values
+                .Where(g => !string.IsNullOrEmpty(g.Name))
+                .Select(g => g.Name)
+                .ToList();
+            allGenres = string.Join(", ", genreNames);
+        }
+
         gameDetails = new Game
         {
             GameId = game?.Id,
@@ -73,7 +83,7 @@
             ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotHuge),
             ReleaseDate = game?.FirstReleaseDate,
             Rating = game?.TotalRating,
-            Genre = game?.Genres?.Values?.FirstOrDefault()?.Name ?? "N/A"
+            Genre = allGenres
         };
     }
 
