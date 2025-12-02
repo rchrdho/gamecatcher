@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace GameCatcher.Data.Migrations
+namespace GameCatcher.data.Migrations
 {
     [DbContext(typeof(GameCatcherDbContext))]
     partial class GameCatcherDbContextModelSnapshot : ModelSnapshot
