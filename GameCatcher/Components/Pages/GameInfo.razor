@@ -5,6 +5,8 @@
 @using IGDB
 @using Microsoft.AspNetCore.Authorization
 
+@inject IGDBService IGDBService
+
 @rendermode InteractiveServer
 
 <div class="card mb-3">
@@ -19,7 +21,7 @@
                 <div id="game-details">
                     <p class="card-text"><small class="text-muted">Release Date:
                             @gameDetails?.ReleaseDate?.ToString("MMMM dd, yyyy")</small></p>
-                    <p class="card-text"><small class="text-muted">Rating: @gameDetails?.Rating</small></p>
+                    <p class="card-text"><small class="text-muted">Rating: @gameDetails?.Rating?.ToString("F2")</small></p>
                     <p class="card-text"><small class="text-muted">Genre: @gameDetails?.Genre</small></p>
                 </div>
                 <AuthorizeView>
@@ -50,7 +52,6 @@
 
     private bool showReviewForm = false;
 
-    public IGDBService _igdbService = new IGDBService();
     private Game? gameDetails;
 
     protected override async Task OnInitializedAsync()
@@ -60,9 +61,19 @@
 
     private async Task FetchGameDetailsByIdAsync()
     {
-        IGDB.Models.Game? game = await _igdbService.GetGameBySingleIdAsync(GameId);
+        IGDB.Models.Game? game = await IGDBService.GetGameBySingleIdAsync(GameId);
 
         IGDB.Models.Artwork? artwork = game?.Artworks?.Values?.FirstOrDefault();
+
+        string allGenres = "N/A";
+        if(game?.Genres?.Values?.Any() == true)
+        {
+            List<string> genreNames = game.Genres.Values
+                .Where(g => !string.IsNullOrEmpty(g.Name))
+                .Select(g => g.Name)
+                .ToList();
+            allGenres = string.Join(", ", genreNames);
+        }
 
         gameDetails = new Game
         {
@@ -72,7 +83,7 @@
             ArtworkImageId = IGDB.ImageHelper.GetImageUrl(imageId: artwork?.ImageId, size: IGDB.ImageSize.ScreenshotHuge),
             ReleaseDate = game?.FirstReleaseDate,
             Rating = game?.TotalRating,
-            Genre = game?.Genres?.Values?.FirstOrDefault()?.Name ?? "N/A"
+            Genre = allGenres
         };
     }
 

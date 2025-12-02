@@ -1,16 +1,17 @@
 using System;
 using GameCatcher.Models;
 using IGDB;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GameCatcher.Services;
 
 public class IGDBService
 {
     private readonly IGDBClient _igdbClient;
-
+    private readonly IMemoryCache _memoryCache;
     // Query Fields
     public string GameQueryFields { get; set; } =
-        "id, name, summary, artworks.image_id, genres, first_release_date, total_rating";
+        "id, name, summary, artworks.image_id, genres.name, first_release_date, total_rating";
     public string PopularityPrimitiveQueryFields { get; set; } =
         "id, game_id, popularity_type, value";
 
@@ -19,24 +20,35 @@ public class IGDBService
     public string IGDBPopularityPrimitivesEndpoint { get; set; } =
         IGDBClient.Endpoints.PopularityPrimitives;
 
-    public IGDBService()
+    public IGDBService(IMemoryCache cache)
     {
         var clientId = Environment.GetEnvironmentVariable("IGDB_CLIENT_ID");
         var clientSecret = Environment.GetEnvironmentVariable("IGDB_CLIENT_SECRET");
-
+        
         _igdbClient = new IGDBClient(clientId!, clientSecret!);
-    }
+        _memoryCache = cache;
+    }  
 
-    public async Task<List<IGDB.Models.PopularityPrimitive>> GetGamesByTypeAsync(
+    public async Task<List<IGDB.Models.PopularityPrimitive>?> GetGamesByTypeAsync(
         int limit,
         int popularityType
     )
     {
-        var popularityPrimitives = await _igdbClient.QueryAsync<IGDB.Models.PopularityPrimitive>(
-            IGDBPopularityPrimitivesEndpoint,
-            query: $"fields {PopularityPrimitiveQueryFields}; limit {limit}; where popularity_type = {popularityType};"
-        );
-        return popularityPrimitives.ToList();
+        string cacheKey = $"popular_games_{limit}_{popularityType}";
+
+        if (!_memoryCache.TryGetValue(cacheKey, out List<IGDB.Models.PopularityPrimitive>? cachedGames))
+        {
+            var result = await _igdbClient.QueryAsync<IGDB.Models.PopularityPrimitive>(
+                IGDBPopularityPrimitivesEndpoint,
+                query: $"fields {PopularityPrimitiveQueryFields}; limit {limit}; where popularity_type = {popularityType};"
+            );
+            cachedGames = result.ToList();
+            var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
+
+            _memoryCache.Set(cacheKey, cachedGames, cacheEntryOptions);
+        }
+
+        return cachedGames;
     }
 
     public async Task<IGDB.Models.Game> GetGameBySingleIdAsync(long gameId)
@@ -90,7 +102,7 @@ public class IGDBService
             catch (RestEase.ApiException ex)
             {
                 attempt++;
-                if (attempt > maxRetries || (ex.Message?.Contains("429") != true))
+                if (attempt > maxRetries || (ex.StatusCode != System.Net.HttpStatusCode.TooManyRequests))
                     throw;
 
                 var delayMs = (int)(Math.Pow(2, attempt) * 500) + new Random().Next(500, 1000);

@@ -1,4 +1,4 @@
-﻿@page "/Friend/Profile/{FriendId}"
+@page "/Profile/{UserId}"
 @using GameCatcher.Data
 @using GameCatcher.Models
 @using GameCatcher.DatabaseService
@@ -93,14 +93,14 @@
 </div>
 
 @code {
-    [Parameter] public string? FriendId { get; set; }
+    [Parameter] public string? UserId { get; set; }
     public ApplicationUser? User { get; set; }
     private List<Review> friendReviews = new();
     private Dictionary<long, string> GameIdGameName = new();
     private Dictionary<long, string> GameIdGameArtwork = new();
 
     private string? CurrentUserId;
-    private bool IsMe => CurrentUserId == FriendId;
+    private bool IsMe => CurrentUserId == UserId;
     private bool IsFriend;
     private bool RequestPending;
     private bool HasIncomingRequest;
@@ -110,7 +110,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        User = await UserService.GetUserByIdAsync(FriendId!);
+        User = await UserService.GetUserByIdAsync(UserId!);
 
         if (User != null)
         {
@@ -122,18 +122,18 @@
                 var friendsWith = await FriendService.GetFriendsByUserId(CurrentUserId);
                 var friendsOf = await FriendService.GetFriendsOfUserByUserId(CurrentUserId);
                 var friends = friendsWith.Concat(friendsOf).ToList();
-                
-                IsFriend = friends.Any(f => f.Id == FriendId);
+
+                IsFriend = friends.Any(f => f.Id == UserId);
 
                 if (!IsFriend)
                 {
                     // check if I sent a request to them
-                    var myPendingRequests = await FriendRequestService.GetPendingRequestsAsync(FriendId!); // Requests waiting on THEM
+                    var myPendingRequests = await FriendRequestService.GetPendingRequestsAsync(UserId!); // Requests waiting on THEM
                     RequestPending = myPendingRequests.Any(r => r.SenderId == CurrentUserId);
 
                     // check if they sent a request to me
                     var incomingRequests = await FriendRequestService.GetPendingRequestsAsync(CurrentUserId);
-                    HasIncomingRequest = incomingRequests.Any(r => r.SenderId == FriendId);
+                    HasIncomingRequest = incomingRequests.Any(r => r.SenderId == UserId);
                 }
             }
         }
@@ -157,18 +157,18 @@
 
     private async Task SendFriendRequest()
     {
-        if (CurrentUserId != null && FriendId != null)
+        if (CurrentUserId != null && UserId != null)
         {
-            await FriendRequestService.SendRequestAsync(CurrentUserId, FriendId);
+            await FriendRequestService.SendRequestAsync(CurrentUserId, UserId);
             RequestPending = true;
         }
     }
 
     private async Task RemoveFriend()
     {
-        if (CurrentUserId != null && FriendId != null)
+        if (CurrentUserId != null && UserId != null)
         {
-            await FriendService.RemoveFriend(CurrentUserId, FriendId);
+            await FriendService.RemoveFriend(CurrentUserId, UserId);
             IsFriend = false;
         }
     }

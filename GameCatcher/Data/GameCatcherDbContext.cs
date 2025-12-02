@@ -11,8 +11,9 @@ public class GameCatcherDbContext : IdentityDbContext<ApplicationUser>
         : base(options) { }
 
     public DbSet<Game> Games { get; set; }
-
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<FriendRequest> FriendRequests { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +36,28 @@ public class GameCatcherDbContext : IdentityDbContext<ApplicationUser>
             .HasMany(u => u.Friends)
             .WithMany(u => u.FriendOf)
             .UsingEntity(join => join.ToTable("UserFriends"));
+
+        // declaring primary key
+        modelBuilder.Entity<FriendRequest>().HasKey(r => r.RequestId);
+        modelBuilder.Entity<Notification>().HasKey(n => n.NotificationId);
+
+        modelBuilder
+            .Entity<FriendRequest>()
+            .HasIndex(r => new { r.SenderId, r.ReceiverId })
+            .IsUnique()
+            .HasFilter("[Status] = 0");
+
+        modelBuilder
+            .Entity<FriendRequest>()
+            .HasOne(r => r.Sender)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder
+            .Entity<FriendRequest>()
+            .HasOne(r => r.Receiver)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
 
         base.OnModelCreating(modelBuilder);
     }

@@ -40,4 +40,14 @@ public class FriendService : IFriendService
 
         return users.FirstOrDefault()!.Friends!.ToList();
     }
+
+    public async Task<List<ApplicationUser>> GetFriendsOfUserByUserId(string userId)
+    {
+        var users = await _dbContext
+            .Users.Where(u => u.Id == userId)
+            .Include(u => u.FriendOf)
+            .ToListAsync();
+
+        return users.FirstOrDefault()!.FriendOf!.ToList();
+    }
 }
