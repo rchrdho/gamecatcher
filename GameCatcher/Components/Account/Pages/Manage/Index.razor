@@ -3,7 +3,8 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using GameCatcher.Data
-
+@using System.IO
+@using Microsoft.AspNetCore.Hosting
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityUserAccessor UserAccessor
@@ -17,7 +18,7 @@
 
 <div class="row">
     <div class="col-xl-6">
-        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+        <EditForm Model="Input" FormName="profile" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="mb-3 text-center">
@@ -53,7 +54,7 @@
                 <ValidationMessage For="() => Input.DisplayName" class="text-danger"/>
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">
-            Edit Profile
+            Update Profile
             </button>
         </EditForm>
     </div>
@@ -76,6 +77,7 @@
     private string ImagePreviewUrl => string.IsNullOrEmpty(Input.ProfilePictureUrl) 
         ? DefaultProfileImage 
         : Input.ProfilePictureUrl;
+    
     protected override async Task OnInitializedAsync()
     {
         user = await UserAccessor.GetRequiredUserAsync(HttpContext); 
@@ -86,35 +88,6 @@
             Input.DisplayName = user.DisplayName;
         }
         
-        if (string.IsNullOrEmpty(Input.ProfilePictureUrl))
-        {
-            Input.ProfilePictureUrl = user.ProfilePictureUrl;
-        }
-    }
-
-    private async Task OnValidSubmitAsync()
-    {
-        bool hasChanges = false;
-
-        if (Input.DisplayName != user.DisplayName)
-        {
-            user.DisplayName = Input.DisplayName;
-            hasChanges = true;
-        }
-
-        if (Input.ProfilePictureUrl != user.ProfilePictureUrl)
-        {
-            user.ProfilePictureUrl = Input.ProfilePictureUrl;
-            hasChanges = true;
-        }
-
-        if (hasChanges)
-        {
-            // Save changes.
-            await UserManager.UpdateAsync(user);
-        }
-        await SignInManager.RefreshSignInAsync(user);
-        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
 
     // This handles File upload for our profile pictures.
@@ -150,6 +123,41 @@
         }
     }
 
+    private async Task HandleSubmit(EditContext context)
+    {
+        if (!context.Validate())
+        {
+            Console.WriteLine("VALIDATION FAILED. Errors:");
+            foreach (var err in context.GetValidationMessages())
+            {
+                Console.WriteLine($"- {err}");
+            }
+             // Stop if invalid
+            return;
+        }
+
+        bool hasChanges = false;
+
+        if (Input.DisplayName != user.DisplayName)
+        {
+            user.DisplayName = Input.DisplayName;
+            hasChanges = true;
+        }
+
+        if (!string.IsNullOrEmpty(Input.ProfilePictureUrl) && Input.ProfilePictureUrl != user.ProfilePictureUrl)
+        {
+            user.ProfilePictureUrl = Input.ProfilePictureUrl;
+            hasChanges = true;
+        }
+        
+        if (hasChanges)
+        {
+            await UserManager.UpdateAsync(user);
+        }
+
+        await SignInManager.RefreshSignInAsync(user);
+        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+    }
     private sealed class InputModel
     {
         [Url]
