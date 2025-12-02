@@ -1,0 +1,70 @@
+﻿@page "/Account/Manage/FriendRequests"
+@using GameCatcher.Models
+@using GameCatcher.DatabaseService
+@using System.Security.Claims
+@inject IFriendRequestService FriendRequestService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@rendermode InteractiveServer
+
+<h3>Friend Requests</h3>
+
+@if (Requests == null)
+{
+    <p>Loading...</p>
+}
+else if (!Requests.Any())
+{
+    <div class="alert alert-info">You have no pending friend requests.</div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var request in Requests)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1">@request.Sender?.UserName</h5>
+                    <small>Sent: @request.CreatedAt.ToShortDateString()</small>
+                </div>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" @onclick="() => Accept(request.RequestId)">Accept</button>
+                    <button class="btn btn-outline-danger btn-sm" @onclick="() => Reject(request.RequestId)">Decline</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<FriendRequest>? Requests;
+    private string? UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        UserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (UserId != null)
+        {
+            await LoadRequests();
+        }
+    }
+
+    private async Task LoadRequests()
+    {
+        Requests = await FriendRequestService.GetPendingRequestsAsync(UserId!);
+    }
+
+    private async Task Accept(int requestId)
+    {
+        await FriendRequestService.AcceptRequestAsync(requestId);
+        await LoadRequests();
+    }
+
+    private async Task Reject(int requestId)
+    {
+        await FriendRequestService.RejectRequestAsync(requestId);
+        await LoadRequests(); 
+    }
+}
